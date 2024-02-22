@@ -13,9 +13,5 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
-    htpasswd = {
-      source  = "loafoe/htpasswd"
-      version = "~> 1.0"
-    }
   }
 }
