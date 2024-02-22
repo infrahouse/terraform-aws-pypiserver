@@ -11,6 +11,7 @@ module "pypiserver" {
   asg_subnets                   = var.asg_subnets
   asg_min_size                  = 1
   asg_max_size                  = 1
+  asg_instance_type             = var.asg_instance_type
   dns_names                     = var.dns_names
   docker_image                  = "pypiserver/pypiserver:latest"
   internet_gateway_id           = var.internet_gateway_id

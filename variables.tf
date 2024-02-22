@@ -1,3 +1,8 @@
+variable "asg_instance_type" {
+  description = "EC2 instances type"
+  type        = string
+  default     = "t3.micro"
+}
 variable "asg_subnets" {
   description = "Auto Scaling Group Subnets."
   type        = list(string)
@@ -28,3 +33,4 @@ variable "zone_id" {
   description = "Zone where DNS records will be created for the service and certificate validation."
   type        = string
 }
+
