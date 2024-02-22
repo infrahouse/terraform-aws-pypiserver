@@ -6,6 +6,7 @@ module "service-network" {
   management_cidr_block = "10.1.0.0/16"
   enable_dns_hostnames  = true
   enable_dns_support    = true
+  restrict_all_traffic  = true
   subnets = [
     {
       cidr                    = "10.1.0.0/24"
