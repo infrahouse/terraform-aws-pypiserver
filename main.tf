@@ -8,6 +8,7 @@ module "pypiserver" {
     aws     = aws
     aws.dns = aws.dns
   }
+  alb_healthcheck_path          = "/"
   asg_subnets                   = var.asg_subnets
   asg_min_size                  = 1
   asg_max_size                  = 1
@@ -40,7 +41,7 @@ module "pypiserver" {
       content = format(
         "%s:%s",
         jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["username"],
-        bcrypt(jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["password"])
+        jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["bcrypt_hash"]
       )
       path        = "/etc/htpasswd"
       permissions = "644"

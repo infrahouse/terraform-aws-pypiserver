@@ -17,6 +17,7 @@ resource "aws_secretsmanager_secret_version" "pypiserver_secret" {
     {
       username : random_pet.username.id
       password : random_password.password.result
+      bcrypt_hash : random_password.password.bcrypt_hash
     }
   )
 }
