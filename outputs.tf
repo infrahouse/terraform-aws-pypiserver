@@ -19,3 +19,8 @@ output "pypi_user_secret" {
   description = "AWS secret that stores PyPI username/password"
   value       = aws_secretsmanager_secret.pypiserver_secret.id
 }
+
+output "pypi_user_secret_arn" {
+  description = "AWS secret ARN that stores PyPI username/password"
+  value       = aws_secretsmanager_secret.pypiserver_secret.arn
+}

@@ -20,6 +20,7 @@ module "pypiserver" {
   zone_id               = data.aws_route53_zone.test_zone.zone_id
 }
 ```
+terraform-docs markdown .
 ## Requirements
 
 | Name | Version |
@@ -81,4 +82,5 @@ module "pypiserver" {
 | <a name="output_pypi_password"></a> [pypi\_password](#output\_pypi\_password) | Password to access PyPI server. |
 | <a name="output_pypi_server_urls"></a> [pypi\_server\_urls](#output\_pypi\_server\_urls) | List of PyPI server URLs. |
 | <a name="output_pypi_user_secret"></a> [pypi\_user\_secret](#output\_pypi\_user\_secret) | AWS secret that stores PyPI username/password |
+| <a name="output_pypi_user_secret_arn"></a> [pypi\_user\_secret\_arn](#output\_pypi\_user\_secret\_arn) | AWS secret ARN that stores PyPI username/password |
 | <a name="output_pypi_username"></a> [pypi\_username](#output\_pypi\_username) | Username to access PyPI server. |
