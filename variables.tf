@@ -24,6 +24,12 @@ variable "load_balancer_subnets" {
   type        = list(string)
 }
 
+variable "secret_readers" {
+  description = "List of role ARNs that will have read permissions of the PyPI secret."
+  default     = null
+  type        = list(string)
+}
+
 variable "ssh_key_name" {
   description = "ssh key name installed in ECS host instances."
   type        = string
