@@ -40,8 +40,8 @@ module "pypiserver" {
     {
       content = format(
         "%s:%s",
-        jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["username"],
-        jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["bcrypt_hash"]
+        jsondecode(module.pypiserver_secret.secret_value)["username"],
+        jsondecode(module.pypiserver_secret.secret_value)["bcrypt_hash"]
       )
       path        = "/etc/htpasswd"
       permissions = "644"

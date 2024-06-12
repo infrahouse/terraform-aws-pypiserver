@@ -6,21 +6,21 @@ output "pypi_server_urls" {
 output "pypi_username" {
   description = "Username to access PyPI server."
   sensitive   = true
-  value       = jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["username"]
+  value       = jsondecode(module.pypiserver_secret.secret_value)["username"]
 }
 
 output "pypi_password" {
   description = "Password to access PyPI server."
   sensitive   = true
-  value       = jsondecode(aws_secretsmanager_secret_version.pypiserver_secret.secret_string)["password"]
+  value       = jsondecode(module.pypiserver_secret.secret_value)["password"]
 }
 
 output "pypi_user_secret" {
   description = "AWS secret that stores PyPI username/password"
-  value       = aws_secretsmanager_secret.pypiserver_secret.id
+  value       = module.pypiserver_secret.secret_id
 }
 
 output "pypi_user_secret_arn" {
   description = "AWS secret ARN that stores PyPI username/password"
-  value       = aws_secretsmanager_secret.pypiserver_secret.arn
+  value       = module.pypiserver_secret.secret_arn
 }

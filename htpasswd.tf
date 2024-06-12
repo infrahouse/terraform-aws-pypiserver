@@ -3,21 +3,19 @@ resource "random_password" "password" {
   special = false
 }
 
-resource "random_pet" "username" {
-}
+resource "random_pet" "username" {}
 
-resource "aws_secretsmanager_secret" "pypiserver_secret" {
-  name_prefix             = "PYPISERVER_SECRET"
-  recovery_window_in_days = 0
-}
-
-resource "aws_secretsmanager_secret_version" "pypiserver_secret" {
-  secret_id = aws_secretsmanager_secret.pypiserver_secret.id
-  secret_string = jsonencode(
+module "pypiserver_secret" {
+  source             = "registry.infrahouse.com/infrahouse/secret/aws"
+  version            = "0.5.0"
+  secret_name_prefix = "PYPISERVER_SECRET"
+  secret_description = "Username and password for the basic http authentication on the PyPI server."
+  secret_value = jsonencode(
     {
       username : random_pet.username.id
       password : random_password.password.result
       bcrypt_hash : random_password.password.bcrypt_hash
     }
   )
+  readers = var.secret_readers
 }
