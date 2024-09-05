@@ -3,7 +3,7 @@ locals {
 }
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/ecs/aws"
-  version = "3.5.0"
+  version = "3.6.1"
   providers = {
     aws     = aws
     aws.dns = aws.dns
@@ -19,7 +19,6 @@ module "pypiserver" {
   load_balancer_subnets         = var.load_balancer_subnets
   service_name                  = "pypiserver"
   ssh_key_name                  = var.ssh_key_name
-  ssh_cidr_block                = data.aws_vpc.selected.cidr_block
   zone_id                       = var.zone_id
   container_healthcheck_command = "/usr/local/bin/python -c \"import socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect(('127.0.0.1', ${local.container_port}))\" || exit 1"
   container_command = [
