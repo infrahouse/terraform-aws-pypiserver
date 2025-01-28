@@ -20,7 +20,8 @@ module "pypiserver" {
   zone_id               = data.aws_route53_zone.test_zone.zone_id
 }
 ```
-terraform-docs markdown .
+
+
 ## Requirements
 
 | Name | Version |
@@ -40,8 +41,8 @@ terraform-docs markdown .
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | infrahouse/ecs/aws | 3.1.1 |
-| <a name="module_pypiserver_secret"></a> [pypiserver\_secret](#module\_pypiserver\_secret) | registry.infrahouse.com/infrahouse/secret/aws | 0.5.0 |
+| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 5.0.0 |
+| <a name="module_pypiserver_secret"></a> [pypiserver\_secret](#module\_pypiserver\_secret) | registry.infrahouse.com/infrahouse/secret/aws | 1.0.0 |
 
 ## Resources
 
@@ -69,9 +70,11 @@ terraform-docs markdown .
 | <a name="input_asg_instance_type"></a> [asg\_instance\_type](#input\_asg\_instance\_type) | EC2 instances type | `string` | `"t3.micro"` | no |
 | <a name="input_asg_subnets"></a> [asg\_subnets](#input\_asg\_subnets) | Auto Scaling Group Subnets. | `list(string)` | n/a | yes |
 | <a name="input_dns_names"></a> [dns\_names](#input\_dns\_names) | List of hostnames the module will create in var.zone\_id. | `list(string)` | <pre>[<br>  "pypiserver"<br>]</pre> | no |
+| <a name="input_environment"></a> [environment](#input\_environment) | Name of environment. | `string` | `"development"` | no |
 | <a name="input_internet_gateway_id"></a> [internet\_gateway\_id](#input\_internet\_gateway\_id) | Internet gateway id. Usually created by 'infrahouse/service-network/aws' | `string` | n/a | yes |
 | <a name="input_load_balancer_subnets"></a> [load\_balancer\_subnets](#input\_load\_balancer\_subnets) | Load Balancer Subnets. | `list(string)` | n/a | yes |
 | <a name="input_secret_readers"></a> [secret\_readers](#input\_secret\_readers) | List of role ARNs that will have read permissions of the PyPI secret. | `list(string)` | `null` | no |
+| <a name="input_service_name"></a> [service\_name](#input\_service\_name) | Service name. | `string` | `"pypiserver"` | no |
 | <a name="input_ssh_key_name"></a> [ssh\_key\_name](#input\_ssh\_key\_name) | ssh key name installed in ECS host instances. | `string` | n/a | yes |
 | <a name="input_zone_id"></a> [zone\_id](#input\_zone\_id) | Zone where DNS records will be created for the service and certificate validation. | `string` | n/a | yes |
 

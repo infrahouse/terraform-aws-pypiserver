@@ -1,8 +1,11 @@
 resource "aws_efs_file_system" "packages" {
   creation_token = "pypi-packages"
-  tags = {
-    Name = "pypi-packages"
-  }
+  tags = merge(
+    {
+      Name = "pypi-packages"
+    },
+    local.default_module_tags
+  )
 }
 
 resource "aws_efs_mount_target" "packages" {
@@ -19,9 +22,12 @@ resource "aws_security_group" "efs" {
   name_prefix = var.dns_names[0]
   vpc_id      = data.aws_subnet.selected.vpc_id
 
-  tags = {
-    Name : "pypiserver EFS"
-  }
+  tags = merge(
+    {
+      Name : "pypiserver EFS"
+    },
+    local.default_module_tags
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "efs" {
@@ -31,9 +37,12 @@ resource "aws_vpc_security_group_ingress_rule" "efs" {
   to_port           = 2049
   ip_protocol       = "tcp"
   cidr_ipv4         = data.aws_vpc.selected.cidr_block
-  tags = {
-    Name = "NFS traffic"
-  }
+  tags = merge(
+    {
+      Name = "NFS traffic"
+    },
+    local.default_module_tags
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "efs_icmp" {
@@ -43,16 +52,22 @@ resource "aws_vpc_security_group_ingress_rule" "efs_icmp" {
   to_port           = -1
   ip_protocol       = "icmp"
   cidr_ipv4         = "0.0.0.0/0"
-  tags = {
-    Name = "ICMP traffic"
-  }
+  tags = merge(
+    {
+      Name = "ICMP traffic"
+    },
+    local.default_module_tags
+  )
 }
 
 resource "aws_vpc_security_group_egress_rule" "efs" {
   security_group_id = aws_security_group.efs.id
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
-  tags = {
-    Name = "EFS outgoing traffic"
-  }
+  tags = merge(
+    {
+      Name = "EFS outgoing traffic"
+    },
+    local.default_module_tags
+  )
 }
