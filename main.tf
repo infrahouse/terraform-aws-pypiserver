@@ -2,13 +2,14 @@ locals {
   container_port = "8080"
 }
 module "pypiserver" {
-  source  = "infrahouse/ecs/aws"
-  version = "3.1.1"
+  source  = "registry.infrahouse.com/infrahouse/ecs/aws"
+  version = "5.0.0"
   providers = {
     aws     = aws
     aws.dns = aws.dns
   }
-  alb_healthcheck_path          = "/"
+  healthcheck_path              = "/"
+  environment                   = var.environment
   asg_subnets                   = var.asg_subnets
   asg_min_size                  = 1
   asg_max_size                  = 1

@@ -14,6 +14,12 @@ variable "dns_names" {
   default     = ["pypiserver"]
 }
 
+variable "environment" {
+  description = "Name of environment."
+  type        = string
+  default     = "development"
+}
+
 variable "internet_gateway_id" {
   description = "Internet gateway id. Usually created by 'infrahouse/service-network/aws'"
   type        = string
@@ -28,6 +34,12 @@ variable "secret_readers" {
   description = "List of role ARNs that will have read permissions of the PyPI secret."
   default     = null
   type        = list(string)
+}
+
+variable "service_name" {
+  description = "Service name."
+  type        = string
+  default     = "pypiserver"
 }
 
 variable "ssh_key_name" {
