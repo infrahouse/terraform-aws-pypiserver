@@ -20,8 +20,6 @@ module "pypiserver" {
   zone_id               = data.aws_route53_zone.test_zone.zone_id
 }
 ```
-
-
 ## Requirements
 
 | Name | Version |
@@ -67,6 +65,7 @@ module "pypiserver" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_ami_id"></a> [ami\_id](#input\_ami\_id) | Image for host EC2 instances. If not specified, the latest Amazon image will be used. | `string` | `null` | no |
 | <a name="input_asg_instance_type"></a> [asg\_instance\_type](#input\_asg\_instance\_type) | EC2 instances type | `string` | `"t3.micro"` | no |
 | <a name="input_asg_subnets"></a> [asg\_subnets](#input\_asg\_subnets) | Auto Scaling Group Subnets. | `list(string)` | n/a | yes |
 | <a name="input_dns_names"></a> [dns\_names](#input\_dns\_names) | List of hostnames the module will create in var.zone\_id. | `list(string)` | <pre>[<br>  "pypiserver"<br>]</pre> | no |

@@ -1,3 +1,9 @@
+variable "ami_id" {
+  description = "Image for host EC2 instances. If not specified, the latest Amazon image will be used."
+  type        = string
+  default     = null
+}
+
 variable "asg_instance_type" {
   description = "EC2 instances type"
   type        = string
