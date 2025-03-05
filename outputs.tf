@@ -24,3 +24,8 @@ output "pypi_user_secret_arn" {
   description = "AWS secret ARN that stores PyPI username/password"
   value       = module.pypiserver_secret.secret_arn
 }
+
+output "pypi_load_balancer_arn" {
+  description = "ARN of the PyPI server load balancer."
+  value       = module.pypiserver.load_balancer_arn
+}
