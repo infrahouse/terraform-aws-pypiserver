@@ -49,4 +49,5 @@ module "pypiserver" {
       permissions = "644"
     }
   ]
+  users = var.users
 }
