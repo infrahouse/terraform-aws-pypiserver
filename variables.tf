@@ -9,6 +9,19 @@ variable "asg_instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+variable "asg_min_size" {
+  description = "Minimum number of instances in ASG. By default, the number of subnets."
+  type        = number
+  default     = null
+}
+
+variable "asg_max_size" {
+  description = "Maximum number of instances in ASG. By default, it's calculated based on number of tasks and their memory requirements."
+  type        = number
+  default     = null
+}
+
 variable "asg_subnets" {
   description = "Auto Scaling Group Subnets."
   type        = list(string)
@@ -51,6 +64,18 @@ variable "service_name" {
 variable "ssh_key_name" {
   description = "ssh key name installed in ECS host instances."
   type        = string
+}
+
+variable "task_max_count" {
+  description = "Highest number of tasks to run"
+  type        = number
+  default     = 10
+}
+
+variable "task_min_count" {
+  description = "Lowest number of tasks to run"
+  type        = number
+  default     = 2
 }
 
 variable "users" {
