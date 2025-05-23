@@ -3,7 +3,7 @@ locals {
 }
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/ecs/aws"
-  version = "5.7.1"
+  version = "5.8.1"
   providers = {
     aws     = aws
     aws.dns = aws.dns
@@ -11,8 +11,10 @@ module "pypiserver" {
   healthcheck_path         = "/"
   environment              = var.environment
   asg_subnets              = var.asg_subnets
-  asg_min_size             = 1
-  asg_max_size             = 1
+  asg_min_size             = var.asg_min_size
+  asg_max_size             = var.asg_max_size
+  task_min_count           = var.task_min_count
+  task_max_count           = var.task_max_count
   ami_id                   = var.ami_id
   asg_instance_type        = var.asg_instance_type
   dns_names                = var.dns_names
