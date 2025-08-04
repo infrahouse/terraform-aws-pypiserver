@@ -8,7 +8,7 @@ The module creates a private [PyPI server](https://github.com/pypiserver/pypiser
 ```hcl
 module "pypiserver" {
   source  = "infrahouse/pypiserver/aws"
-  version = "1.6.2"
+  version = "1.7.0"
   providers = {
     aws     = aws
     aws.dns = aws
