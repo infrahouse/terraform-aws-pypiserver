@@ -2,9 +2,6 @@ resource "aws_efs_file_system" "packages-enc" {
   creation_token = "pypi-packages-encrypted"
   encrypted      = true
   kms_key_id     = data.aws_kms_key.efs_default.arn
-  protection {
-   replication_overwrite = "DISABLED"
-  }
   tags = merge(
     {
       Name = "pypi-packages-encrypted"
