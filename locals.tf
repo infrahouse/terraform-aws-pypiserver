@@ -1,4 +1,6 @@
 locals {
+  module_version = "1.6.2"
+
   module_name = "infrahouse/pypiserver/aws"
   default_module_tags = {
     environment : var.environment
