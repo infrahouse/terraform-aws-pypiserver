@@ -17,3 +17,7 @@ data "aws_subnet" "selected" {
 data "aws_vpc" "selected" {
   id = data.aws_subnet.selected.vpc_id
 }
+
+data "aws_kms_key" "efs_default" {
+  key_id = "alias/aws/elasticfilesystem"
+}
