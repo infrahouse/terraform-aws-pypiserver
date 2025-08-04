@@ -40,7 +40,7 @@ module "pypiserver" {
   }
   task_efs_volumes = {
     "packages" : {
-      file_system_id : aws_efs_file_system.packages.id
+      file_system_id : aws_efs_file_system.packages-enc.id
       container_path : "/data/packages"
     }
   }
