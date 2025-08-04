@@ -13,7 +13,7 @@ resource "aws_efs_file_system" "packages-enc" {
   )
 }
 
-resource "aws_efs_mount_target" "packages" {
+resource "aws_efs_mount_target" "packages-enc" {
   for_each       = toset(var.asg_subnets)
   file_system_id = aws_efs_file_system.packages-enc.id
   subnet_id      = each.key
