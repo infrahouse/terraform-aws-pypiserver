@@ -4,7 +4,8 @@ resource "aws_efs_file_system" "packages-enc" {
   kms_key_id     = data.aws_kms_key.efs_default.arn
   tags = merge(
     {
-      Name = "pypi-packages-encrypted"
+      Name           = "pypi-packages-encrypted"
+      module_version = local.module_version
     },
     local.default_module_tags
   )
