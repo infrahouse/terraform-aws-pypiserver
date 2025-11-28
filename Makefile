@@ -13,7 +13,7 @@ export PRINT_HELP_PYSCRIPT
 
 TEST_REGION ?= "us-west-2"
 TEST_ROLE ?= "arn:aws:iam::303467602807:role/pypiserver-tester"
-TEST_SELECTOR ?= "test_"
+TEST_SELECTOR ?= aws-6
 KEEP_AFTER ?=
 
 # Function to run pytest without role (for CI/CD environment)

@@ -21,7 +21,7 @@ module "pypiserver" {
   docker_image             = "pypiserver/pypiserver:latest"
   internet_gateway_id      = data.aws_internet_gateway.selected.id
   load_balancer_subnets    = var.load_balancer_subnets
-  service_name             = "pypiserver"
+  service_name             = var.service_name
   zone_id                  = var.zone_id
   cloudinit_extra_commands = var.cloudinit_extra_commands
 

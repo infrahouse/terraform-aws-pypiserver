@@ -9,6 +9,7 @@ import time
 from os import path as osp
 from textwrap import dedent
 
+import pytest
 import requests
 from infrahouse_core.timeout import timeout
 from pytest_infrahouse import terraform_apply
@@ -252,7 +253,17 @@ def _validate_pypi_functionality(tf_output: dict):
         raise
 
 
-def test_module(service_network, test_role_arn, aws_region, subzone, keep_after):
+@pytest.mark.parametrize(
+    "aws_provider_version", ["~> 5.11", "~> 6.0"], ids=["aws-5", "aws-6"]
+)
+def test_module(
+    service_network,
+    test_role_arn,
+    aws_region,
+    subzone,
+    keep_after,
+    aws_provider_version,
+):
     terraform_root_dir = "test_data"
 
     subnet_public_ids = service_network["subnet_public_ids"]["value"]
@@ -271,6 +282,28 @@ def test_module(service_network, test_role_arn, aws_region, subzone, keep_after)
         os.remove(osp.join(terraform_module_dir, ".terraform.lock.hcl"))
     except FileNotFoundError:
         pass
+
+    # Generate terraform.tf with specified AWS provider version
+    with open(osp.join(terraform_module_dir, "terraform.tf"), "w") as fp:
+        fp.write(
+            dedent(
+                f"""
+                terraform {{
+                  //noinspection HILUnresolvedReference
+                  required_providers {{
+                    aws = {{
+                      source  = "hashicorp/aws"
+                      version = "{aws_provider_version}"
+                    }}
+                  }}
+                }}
+                """
+            )
+        )
+
+    LOG.info(
+        f"Generated terraform.tf with AWS provider version: {aws_provider_version}"
+    )
 
     # Create pypi server
     with open(osp.join(terraform_module_dir, "terraform.tfvars"), "w") as fp:
