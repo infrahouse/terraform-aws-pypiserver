@@ -29,3 +29,13 @@ output "pypi_load_balancer_arn" {
   description = "ARN of the PyPI server load balancer."
   value       = module.pypiserver.load_balancer_arn
 }
+
+output "ecs_service_arn" {
+  description = "ARN of the ECS service running the PyPI server."
+  value       = module.pypiserver.service_arn
+}
+
+output "asg_name" {
+  description = "Name of the Auto Scaling Group for ECS container instances."
+  value       = module.pypiserver.asg_name
+}
