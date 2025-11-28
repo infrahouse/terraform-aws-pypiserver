@@ -2,6 +2,14 @@ resource "aws_efs_file_system" "packages-enc" {
   creation_token = "pypi-packages-encrypted"
   encrypted      = true
   kms_key_id     = data.aws_kms_key.efs_default.arn
+
+  dynamic "lifecycle_policy" {
+    for_each = var.efs_lifecycle_policy != null ? [1] : []
+    content {
+      transition_to_ia = "AFTER_${var.efs_lifecycle_policy}_DAYS"
+    }
+  }
+
   tags = merge(
     {
       Name           = "pypi-packages-encrypted"

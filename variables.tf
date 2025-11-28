@@ -307,3 +307,19 @@ variable "backup_schedule" {
     error_message = "Backup schedule must be a valid cron expression starting with 'cron('."
   }
 }
+
+variable "efs_lifecycle_policy" {
+  description = <<-EOT
+    Number of days after which files are moved to EFS Infrequent Access storage class.
+    Valid values: null (disabled), 7, 14, 30, 60, or 90 days.
+    Moving old package versions to IA storage can reduce costs by up to 92%.
+    Set to null to disable lifecycle policy.
+  EOT
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.efs_lifecycle_policy == null || contains([7, 14, 30, 60, 90], var.efs_lifecycle_policy)
+    error_message = "EFS lifecycle policy must be null or one of: 7, 14, 30, 60, 90 days."
+  }
+}
