@@ -268,3 +268,42 @@ variable "access_log_force_destroy" {
   type        = bool
   default     = false
 }
+
+variable "enable_efs_backup" {
+  description = <<-EOT
+    Enable AWS Backup for the EFS file system containing PyPI packages.
+    When enabled, creates a backup vault, plan, and selection.
+    Set to false in dev/test environments to reduce costs if backups are not needed.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "backup_retention_days" {
+  description = <<-EOT
+    Number of days to retain EFS backups.
+    Only used when enable_efs_backup is true.
+  EOT
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.backup_retention_days > 0 && var.backup_retention_days <= 35
+    error_message = "Backup retention must be between 1 and 35 days."
+  }
+}
+
+variable "backup_schedule" {
+  description = <<-EOT
+    Cron expression for backup schedule.
+    Default is daily at 2 AM UTC: "cron(0 2 * * ? *)"
+    Only used when enable_efs_backup is true.
+  EOT
+  type        = string
+  default     = "cron(0 2 * * ? *)"
+
+  validation {
+    condition     = can(regex("^cron\\(", var.backup_schedule))
+    error_message = "Backup schedule must be a valid cron expression starting with 'cron('."
+  }
+}

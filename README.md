@@ -48,8 +48,14 @@ module "pypiserver" {
 
 | Name | Type |
 |------|------|
+| [aws_backup_plan.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/backup_plan) | resource |
+| [aws_backup_selection.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/backup_selection) | resource |
+| [aws_backup_vault.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/backup_vault) | resource |
 | [aws_efs_file_system.packages-enc](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_file_system) | resource |
 | [aws_efs_mount_target.packages-enc](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_mount_target) | resource |
+| [aws_iam_role.backup](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy_attachment.backup](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.backup_restore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_security_group.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_vpc_security_group_ingress_rule.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule) | resource |
 | [aws_vpc_security_group_ingress_rule.efs_icmp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule) | resource |
@@ -57,6 +63,7 @@ module "pypiserver" {
 | [random_pet.username](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/pet) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_iam_policy_document.backup_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_internet_gateway.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/internet_gateway) | data source |
 | [aws_kms_key.efs_default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_key) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
@@ -74,8 +81,11 @@ module "pypiserver" {
 | <a name="input_asg_max_size"></a> [asg\_max\_size](#input\_asg\_max\_size) | Maximum number of instances in Auto Scaling Group.<br/>If null, calculated based on number of tasks and their memory requirements. | `number` | `null` | no |
 | <a name="input_asg_min_size"></a> [asg\_min\_size](#input\_asg\_min\_size) | Minimum number of instances in Auto Scaling Group.<br/>If null, defaults to the number of subnets. | `number` | `null` | no |
 | <a name="input_asg_subnets"></a> [asg\_subnets](#input\_asg\_subnets) | List of subnet IDs where Auto Scaling Group instances will be launched.<br/>Must contain at least one subnet. | `list(string)` | n/a | yes |
+| <a name="input_backup_retention_days"></a> [backup\_retention\_days](#input\_backup\_retention\_days) | Number of days to retain EFS backups.<br/>Only used when enable\_efs\_backup is true. | `number` | `7` | no |
+| <a name="input_backup_schedule"></a> [backup\_schedule](#input\_backup\_schedule) | Cron expression for backup schedule.<br/>Default is daily at 2 AM UTC: "cron(0 2 * * ? *)"<br/>Only used when enable\_efs\_backup is true. | `string` | `"cron(0 2 * * ? *)"` | no |
 | <a name="input_cloudinit_extra_commands"></a> [cloudinit\_extra\_commands](#input\_cloudinit\_extra\_commands) | Additional cloud-init commands to execute during ASG instance initialization.<br/>Commands are run after the default setup. | `list(string)` | `[]` | no |
 | <a name="input_dns_names"></a> [dns\_names](#input\_dns\_names) | List of DNS hostnames to create in the specified Route53 zone.<br/>These will be A records pointing to the load balancer. | `list(string)` | <pre>[<br/>  "pypiserver"<br/>]</pre> | no |
+| <a name="input_enable_efs_backup"></a> [enable\_efs\_backup](#input\_enable\_efs\_backup) | Enable AWS Backup for the EFS file system containing PyPI packages.<br/>When enabled, creates a backup vault, plan, and selection.<br/>Set to false in dev/test environments to reduce costs if backups are not needed. | `bool` | `true` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name used for resource tagging and naming.<br/>Examples: development, staging, production. | `string` | `"development"` | no |
 | <a name="input_extra_instance_profile_permissions"></a> [extra\_instance\_profile\_permissions](#input\_extra\_instance\_profile\_permissions) | Additional IAM policy document in JSON format to attach to the ASG instance profile.<br/>Useful for granting access to S3, DynamoDB, etc. | `string` | `null` | no |
 | <a name="input_load_balancer_subnets"></a> [load\_balancer\_subnets](#input\_load\_balancer\_subnets) | List of subnet IDs where the Application Load Balancer will be placed.<br/>Must be in different Availability Zones for high availability. | `list(string)` | n/a | yes |
