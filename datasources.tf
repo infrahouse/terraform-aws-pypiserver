@@ -18,6 +18,13 @@ data "aws_vpc" "selected" {
   id = data.aws_subnet.selected.vpc_id
 }
 
+data "aws_internet_gateway" "selected" {
+  filter {
+    name   = "attachment.vpc-id"
+    values = [data.aws_vpc.selected.id]
+  }
+}
+
 data "aws_kms_key" "efs_default" {
   key_id = "alias/aws/elasticfilesystem"
 }

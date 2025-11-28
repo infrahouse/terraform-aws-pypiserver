@@ -2,10 +2,11 @@ variable "environment" {
   default = "development"
 }
 variable "region" {}
-variable "role_arn" {}
-variable "zone_name" {}
+variable "role_arn" {
+  default = null
+}
+variable "zone_id" {}
 
 
 variable "subnet_public_ids" {}
 variable "subnet_private_ids" {}
-variable "internet_gateway_id" {}
