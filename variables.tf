@@ -323,3 +323,18 @@ variable "efs_lifecycle_policy" {
     error_message = "EFS lifecycle policy must be null or one of: 7, 14, 30, 60, 90 days."
   }
 }
+
+variable "docker_image_tag" {
+  description = <<-EOT
+    Docker image tag for PyPI server.
+    Defaults to 'latest'. For production, pin to a specific version (e.g., 'v2.3.0').
+    Available tags: https://hub.docker.com/r/pypiserver/pypiserver/tags
+  EOT
+  type        = string
+  default     = "latest"
+
+  validation {
+    condition     = length(var.docker_image_tag) > 0
+    error_message = "Docker image tag must not be empty."
+  }
+}
