@@ -24,6 +24,7 @@ module "pypiserver" {
   service_name             = var.service_name
   zone_id                  = var.zone_id
   cloudinit_extra_commands = var.cloudinit_extra_commands
+  enable_cloudwatch_logs   = true
 
   extra_instance_profile_permissions = var.extra_instance_profile_permissions
 

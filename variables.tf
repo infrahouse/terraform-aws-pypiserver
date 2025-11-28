@@ -338,3 +338,52 @@ variable "docker_image_tag" {
     error_message = "Docker image tag must not be empty."
   }
 }
+
+variable "alarm_emails" {
+  description = <<-EOT
+    List of email addresses to receive alarm notifications.
+    AWS will send confirmation emails that must be accepted.
+    At least one email is required for CloudWatch alarm notifications.
+  EOT
+  type        = list(string)
+
+  validation {
+    condition     = length(var.alarm_emails) > 0
+    error_message = "At least one email address must be provided for alarm notifications."
+  }
+
+  validation {
+    condition     = alltrue([for email in var.alarm_emails : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", email))])
+    error_message = "All email addresses must be valid email format."
+  }
+}
+
+variable "alarm_topic_arns" {
+  description = <<-EOT
+    List of existing SNS topic ARNs to send alarms to.
+    Useful for advanced integrations like PagerDuty, Slack, etc.
+    These are in addition to the email notifications.
+  EOT
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for arn in var.alarm_topic_arns : can(regex("^arn:aws:sns:[a-z0-9-]+:[0-9]{12}:.+$", arn))])
+    error_message = "All topic ARNs must be valid SNS topic ARNs."
+  }
+}
+
+variable "efs_burst_credit_threshold" {
+  description = <<-EOT
+    Minimum EFS burst credit balance before triggering an alarm.
+    EFS burst credits allow temporary higher throughput. Low credits can impact performance.
+    Default: 1000000000000 (1 trillion bytes, approximately 1TB of burst capacity).
+  EOT
+  type        = number
+  default     = 1000000000000
+
+  validation {
+    condition     = var.efs_burst_credit_threshold > 0
+    error_message = "EFS burst credit threshold must be greater than 0."
+  }
+}

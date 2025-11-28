@@ -9,4 +9,7 @@ module "pypiserver" {
   zone_id               = var.zone_id
 
   access_log_force_destroy = true
+  alarm_emails = [
+    "aleks+terraform-aws-pypiserver@infrahouse.com"
+  ]
 }

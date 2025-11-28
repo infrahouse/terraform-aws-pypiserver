@@ -39,3 +39,16 @@ output "asg_name" {
   description = "Name of the Auto Scaling Group for ECS container instances."
   value       = module.pypiserver.asg_name
 }
+
+output "cloudwatch_alarm_sns_topic_arn" {
+  description = "ARN of the SNS topic used for CloudWatch alarm notifications."
+  value       = aws_sns_topic.alarms.arn
+}
+
+output "cloudwatch_alarm_arns" {
+  description = "ARNs of CloudWatch alarms created for EFS monitoring."
+  value = {
+    efs_burst_credits   = aws_cloudwatch_metric_alarm.efs_burst_credit_balance.arn
+    efs_throughput_high = aws_cloudwatch_metric_alarm.efs_throughput_utilization.arn
+  }
+}
