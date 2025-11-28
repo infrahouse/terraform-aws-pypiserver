@@ -9,4 +9,14 @@ locals {
     created_by_module : local.module_name
   }
 
+  # Cross-variable validation for ASG sizing
+  # Validates that asg_min_size <= asg_max_size when both are set
+  validate_asg_sizing = (
+    var.asg_min_size != null && var.asg_max_size != null ?
+    var.asg_min_size <= var.asg_max_size ?
+    true :
+    tobool("ERROR: asg_min_size (${var.asg_min_size}) must be less than or equal to asg_max_size (${var.asg_max_size})") :
+    true
+  )
+
 }
