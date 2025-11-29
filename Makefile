@@ -112,6 +112,39 @@ docs:  ## Generate module docs
 # Internal function to handle version release
 # Args: $(1) = major|minor|patch
 define do_release
+	@echo "Checking if git-cliff is installed..."
+	@command -v git-cliff >/dev/null 2>&1 || { \
+		echo ""; \
+		echo "Error: git-cliff is not installed."; \
+		echo ""; \
+		echo "Please install it using one of the following methods:"; \
+		echo ""; \
+		echo "  Cargo (Rust):"; \
+		echo "    cargo install git-cliff"; \
+		echo ""; \
+		echo "  Arch Linux:"; \
+		echo "    pacman -S git-cliff"; \
+		echo ""; \
+		echo "  Homebrew (macOS/Linux):"; \
+		echo "    brew install git-cliff"; \
+		echo ""; \
+		echo "  From binary (Linux/macOS/Windows):"; \
+		echo "    https://github.com/orhun/git-cliff/releases"; \
+		echo ""; \
+		echo "For more installation options, see: https://git-cliff.org/docs/installation"; \
+		echo ""; \
+		exit 1; \
+	}
+	@echo "Checking if bumpversion is installed..."
+	@command -v bumpversion >/dev/null 2>&1 || { \
+		echo ""; \
+		echo "Error: bumpversion is not installed."; \
+		echo ""; \
+		echo "Please install it using:"; \
+		echo "  make bootstrap"; \
+		echo ""; \
+		exit 1; \
+	}
 	@BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	if [ "$$BRANCH" != "main" ]; then \
 		echo "Error: You must be on the 'main' branch to release."; \
@@ -135,16 +168,11 @@ define do_release
 	read -r REPLY; \
 	case "$$REPLY" in \
 		[Yy]|[Yy][Ee][Ss]) \
-			if [ -f CHANGELOG.md ]; then \
-				DATE=$$(date +%Y-%m-%d); \
-				sed -i.bak "s/## \[Unreleased\]/## [$$NEW_VERSION] - $$DATE/" CHANGELOG.md; \
-				sed -i.bak "8i\\\n## [Unreleased]" CHANGELOG.md; \
-				rm -f CHANGELOG.md.bak; \
-				git add CHANGELOG.md; \
-				git commit -m "Record release $$NEW_VERSION in CHANGELOG.md"; \
-			else \
-				echo "Warning: CHANGELOG.md not found, skipping changelog update"; \
-			fi; \
+			echo "Updating CHANGELOG.md with git-cliff..."; \
+			git cliff --unreleased --tag $$NEW_VERSION --prepend CHANGELOG.md; \
+			git add CHANGELOG.md; \
+			git commit -m "Update CHANGELOG for $$NEW_VERSION"; \
+			echo "Bumping version with bumpversion..."; \
 			bumpversion --new-version $$NEW_VERSION patch; \
 			echo ""; \
 			echo "✓ Released version $$NEW_VERSION"; \
