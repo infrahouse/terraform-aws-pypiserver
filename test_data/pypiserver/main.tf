@@ -10,6 +10,6 @@ module "pypiserver" {
 
   access_log_force_destroy = true
   alarm_emails = [
-    "aleks+terraform-aws-pypiserver@infrahouse.com"
+    "aleks+terraform-aws-pypiserver@example.com"
   ]
 }
