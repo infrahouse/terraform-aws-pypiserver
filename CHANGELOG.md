@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ## [2.0.0] - 2025-11-28
 
-## [1.11.0] - 2025-11-28
+## [## [Unreleased]] - 2025-11-28
 
 ### Added
 - AWS provider v6 support (>= 5.11, < 7.0.0)
@@ -49,6 +49,6 @@ _Earlier release notes to be added from git history_
 
 ---
 
-[Unreleased]: https://github.com/infrahouse/terraform-aws-pypiserver/compare/1.11.0...HEAD
-[1.11.0]: https://github.com/infrahouse/terraform-aws-pypiserver/compare/1.10.0...1.11.0
+[Unreleased]: https://github.com/infrahouse/terraform-aws-pypiserver/compare/## [Unreleased]...HEAD
+[## [Unreleased]]: https://github.com/infrahouse/terraform-aws-pypiserver/compare/1.10.0...## [Unreleased]
 [1.10.0]: https://github.com/infrahouse/terraform-aws-pypiserver/releases/tag/1.10.0
