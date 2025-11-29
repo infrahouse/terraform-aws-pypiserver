@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2025-11-29
+
+### Miscellaneous Tasks
+
+- Migrate to git-cliff for changelog generation
+
 ## [2.0.0] - 2025-11-28
 
 ### Added
