@@ -21,7 +21,7 @@ KEEP_AFTER ?=
 define run_pytest
 	pytest -xvvs \
 		$(if $(or $(KEEP_AFTER),$(3)),--keep-after,) \
-		-k "$(1) and $(TEST_SELECTOR)" \
+		-k "$(1)" \
 		$(2) 2>&1 | tee pytest-`date +%Y%m%d-%H%M%S`-output.log
 endef
 
