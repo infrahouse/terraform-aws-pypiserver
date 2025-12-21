@@ -19,7 +19,6 @@ module "pypiserver" {
   asg_instance_type        = var.asg_instance_type
   dns_names                = var.dns_names
   docker_image             = "pypiserver/pypiserver:${var.docker_image_tag}"
-  internet_gateway_id      = data.aws_internet_gateway.selected.id
   load_balancer_subnets    = var.load_balancer_subnets
   service_name             = var.service_name
   zone_id                  = var.zone_id
@@ -70,4 +69,6 @@ module "pypiserver" {
   ]
   users                    = var.users
   access_log_force_destroy = var.access_log_force_destroy
+  alarm_emails             = var.alarm_emails
+  sns_topic_arn            = var.alarm_topic_arns
 }

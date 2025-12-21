@@ -1,25 +1,218 @@
 # terraform-aws-pypiserver
-The module creates a private [PyPI server](https://github.com/pypiserver/pypiserver)
 
-> **Note**: The VPC must set `enable_dns_hostnames` and  `enable_dns_support` to true.
+A production-ready Terraform module for deploying a private [PyPI server](https://github.com/pypiserver/pypiserver) 
+on AWS with high availability, encryption, automated backups, and monitoring.
+
+## Architecture
+
+```
+                                    ┌─────────────────────────────────────────────────────────────┐
+                                    │                         AWS Cloud                           │
+                                    │                                                             │
+┌──────────┐   HTTPS    ┌───────────────────────┐                                                 │
+│   pip    │───────────▶│  Application Load     │                                                 │
+│  twine   │            │     Balancer          │                                                 │
+└──────────┘            │  (Public Subnets)     │                                                 │
+                        └───────────┬───────────┘                                                 │
+                                    │                                                             │
+                        ┌───────────▼───────────┐     ┌─────────────────────┐                     │
+                        │   ECS Cluster         │     │   AWS Secrets       │                     │
+                        │   (Auto Scaling)      │────▶│   Manager           │                     │
+                        │                       │     │   (Credentials)     │                     │
+                        │  ┌─────┐    ┌─────┐   │     └─────────────────────┘                     │
+                        │  │Task │    │Task │   │                                                 │
+                        │  │ 1   │    │ 2   │   │     ┌─────────────────────┐                     │
+                        │  └──┬──┘    └──┬──┘   │     │   CloudWatch        │                     │
+                        │     │          │      │────▶│   Logs + Alarms     │                     │
+                        │  (Private Subnets)    │     └─────────────────────┘                     │
+                        └─────────┬─────────────┘                                                 │
+                                  │ NFS                                                           │
+                        ┌─────────▼─────────────┐     ┌─────────────────────┐                     │
+                        │   EFS (Encrypted)     │────▶│   AWS Backup        │                     │
+                        │   Package Storage     │     │   (Daily Backups)   │                     │
+                        └───────────────────────┘     └─────────────────────┘                     │
+                                                                                                  │
+                        ┌───────────────────────┐                                                 │
+                        │   Route53             │                                                 │
+                        │   DNS Records         │                                                 │
+                        └───────────────────────┘                                                 │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Features
+
+- **High Availability**: Auto-scaling ECS cluster across multiple availability zones
+- **Encryption at Rest**: EFS storage encrypted with AWS KMS
+- **Encryption in Transit**: HTTPS with auto-provisioned ACM certificates
+- **Authentication**: HTTP Basic Auth with credentials stored in AWS Secrets Manager
+- **Automated Backups**: Configurable AWS Backup for EFS with retention policies
+- **Monitoring**: CloudWatch alarms for EFS performance (burst credits, throughput)
+- **Cost Optimization**: EFS lifecycle policies to move old packages to Infrequent Access storage
+- **Consistent Package Listings**: Uses `--backend simple-dir` to prevent cache synchronization issues across distributed containers
+
+## Prerequisites
+
+- VPC with `enable_dns_hostnames = true` and `enable_dns_support = true`
+- At least 2 public subnets (for ALB) in different availability zones
+- At least 1 private subnet (for ECS instances)
+- Route53 hosted zone for DNS records
+- Internet Gateway attached to VPC
 
 ## Usage
+
+### Basic Example
 
 ```hcl
 module "pypiserver" {
   source  = "infrahouse/pypiserver/aws"
   version = "2.0.1"
+
   providers = {
     aws     = aws
     aws.dns = aws
   }
-  asg_subnets           = var.subnet_private_ids
-  internet_gateway_id   = var.internet_gateway_id
-  load_balancer_subnets = var.subnet_public_ids
-  ssh_key_name          = aws_key_pair.test.key_name
-  zone_id               = data.aws_route53_zone.test_zone.zone_id
+
+  # Required
+  asg_subnets           = ["subnet-private-1a", "subnet-private-1b"]
+  load_balancer_subnets = ["subnet-public-1a", "subnet-public-1b"]
+  zone_id               = "Z1234567890ABC"
+  alarm_emails          = ["ops@example.com"]
+}
+
+# Retrieve credentials
+output "pypi_url" {
+  value = module.pypiserver.pypi_server_urls[0]
+}
+
+output "pypi_username" {
+  value     = module.pypiserver.pypi_username
+  sensitive = true
+}
+
+output "pypi_password" {
+  value     = module.pypiserver.pypi_password
+  sensitive = true
 }
 ```
+
+### Production Example
+
+```hcl
+module "pypiserver" {
+  source  = "infrahouse/pypiserver/aws"
+  version = "~> 2.1"
+
+  providers = {
+    aws     = aws
+    aws.dns = aws.dns  # Can use different provider for DNS
+  }
+
+  # Required
+  asg_subnets           = data.aws_subnets.private.ids
+  load_balancer_subnets = data.aws_subnets.public.ids
+  zone_id               = data.aws_route53_zone.main.zone_id
+  alarm_emails          = ["ops@example.com", "oncall@example.com"]
+
+  # Naming
+  service_name = "pypi"
+  dns_names    = ["pypi", "packages"]  # Creates pypi.example.com, packages.example.com
+  environment  = "production"
+
+  # Scaling - control via task counts; ASG size is auto-calculated
+  asg_instance_type = "t3.small"
+  task_min_count    = 2
+  task_max_count    = 10
+  # asg_min_size    = 2   # Optional: override only if needed
+  # asg_max_size    = 6   # Optional: override only if needed
+
+  # Container
+  docker_image_tag = "v2.3.0"  # Pin to specific version
+
+  # Backups
+  enable_efs_backup     = true
+  backup_retention_days = 30
+  backup_schedule       = "cron(0 3 * * ? *)"  # 3 AM UTC daily
+
+  # Cost optimization
+  efs_lifecycle_policy = 30  # Move to IA after 30 days
+
+  # Additional alerting
+  alarm_topic_arns = [aws_sns_topic.pagerduty.arn]
+
+  # SSH access for debugging (optional)
+  users = [
+    {
+      name   = "admin"
+      groups = "wheel"
+      sudo   = ["ALL=(ALL) NOPASSWD:ALL"]
+      ssh_authorized_keys = [
+        "ssh-rsa AAAA... admin@example.com"
+      ]
+    }
+  ]
+}
+```
+
+## Uploading and Installing Packages
+
+### Configure pip
+
+Add to `~/.pip/pip.conf` (Linux/macOS) or `%APPDATA%\pip\pip.ini` (Windows):
+
+```ini
+[global]
+extra-index-url = https://USERNAME:PASSWORD@pypi.example.com/simple/
+trusted-host = pypi.example.com
+```
+
+Or use environment variables:
+
+```bash
+export PIP_EXTRA_INDEX_URL="https://USERNAME:PASSWORD@pypi.example.com/simple/"
+```
+
+### Configure twine for uploads
+
+Add to `~/.pypirc`:
+
+```ini
+[distutils]
+index-servers =
+    private
+
+[private]
+repository = https://pypi.example.com/
+username = USERNAME
+password = PASSWORD
+```
+
+Upload packages:
+
+```bash
+twine upload --repository private dist/*
+```
+
+### Retrieve Credentials
+
+```bash
+# Get credentials from Terraform outputs
+terraform output -raw pypi_username
+terraform output -raw pypi_password
+
+# Or from AWS Secrets Manager
+aws secretsmanager get-secret-value \
+  --secret-id PYPISERVER_SECRET-xxxxx \
+  --query SecretString --output text | jq -r '.username, .password'
+```
+
+## Security Considerations
+
+- **Network**: ALB can be deployed in public subnets (internet-facing) or private subnets (internal-only)
+- **Authentication**: HTTP Basic Auth required for all operations (download, list, upload)
+- **Credentials**: Auto-generated and stored in AWS Secrets Manager; Terraform state must be treated as sensitive
+- **Encryption**: EFS encrypted at rest with AWS-managed KMS key; HTTPS enforced
+- **IAM**: Least-privilege IAM roles for ECS tasks and backup operations
+- **Access Control**: Use `secret_readers` variable to grant specific IAM roles access to credentials
 <!-- BEGIN_TF_DOCS -->
 
 ## Requirements
