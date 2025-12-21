@@ -70,5 +70,4 @@ module "pypiserver" {
   users                    = var.users
   access_log_force_destroy = var.access_log_force_destroy
   alarm_emails             = var.alarm_emails
-  sns_topic_arn            = var.alarm_topic_arns
 }
