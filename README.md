@@ -234,7 +234,7 @@ aws secretsmanager get-secret-value \
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 6.1.0 |
+| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 7.0.0 |
 | <a name="module_pypiserver_secret"></a> [pypiserver\_secret](#module\_pypiserver\_secret) | registry.infrahouse.com/infrahouse/secret/aws | 1.1.1 |
 
 ## Resources
