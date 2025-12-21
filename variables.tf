@@ -35,7 +35,7 @@ variable "asg_min_size" {
   default     = null
 
   validation {
-    condition     = var.asg_min_size == null || var.asg_min_size >= 0
+    condition     = var.asg_min_size == null ? true : var.asg_min_size >= 0
     error_message = "ASG minimum size must be >= 0 or null."
   }
 }
@@ -49,7 +49,7 @@ variable "asg_max_size" {
   default     = null
 
   validation {
-    condition     = var.asg_max_size == null || var.asg_max_size > 0
+    condition     = var.asg_max_size == null ? true : var.asg_max_size > 0
     error_message = "ASG maximum size must be > 0 or null."
   }
 }
@@ -132,7 +132,7 @@ variable "secret_readers" {
   default     = null
 
   validation {
-    condition = var.secret_readers == null || alltrue([
+    condition = var.secret_readers == null ? true : alltrue([
       for arn in var.secret_readers : can(regex("^arn:aws:iam::[0-9]{12}:role/.+$", arn))
     ])
     error_message = "All secret readers must be valid IAM role ARNs."
