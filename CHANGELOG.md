@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.2] - 2025-12-21
+
+### Bug Fixes
+
+- Variable validation short-circuit bug for Terraform < 1.14
+- Propagate pytest exit code through tee pipe in CI
+- Fix git cliff commit message
+
+### Documentation
+
+- Rewrite README with architecture diagram and usage examples
+
+### Miscellaneous Tasks
+
+- Update terraform registry.infrahouse.com/infrahouse/ecs/aws to v7
+
 ## [2.0.1] - 2025-11-29
 
 ### Miscellaneous Tasks
