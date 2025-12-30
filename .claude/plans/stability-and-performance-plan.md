@@ -1622,7 +1622,7 @@ This maintains correctness while achieving acceptable performance for typical wo
 
 ## Phase 4: Module Enhancements (Optional)
 
-### 4.1 Add CloudWatch Dashboard
+### 4.1 Add CloudWatch Dashboard ✅ COMPLETED
 
 **Deliverable**: `cloudwatch-dashboard.tf` (new file)
 
@@ -1673,76 +1673,84 @@ output "cloudwatch_dashboard_url" {
 
 ---
 
-### 4.2 Add Memory-Based Auto-Scaling
+### 4.2 Add Memory-Based Auto-Scaling ❌ CANCELLED
 
-**Problem**: Currently only CPU-based scaling exists
+**Reason**: Not needed after implementing dual-constraint capacity calculation and "fewer, beefier instances" strategy.
 
-**Changes**:
+**Why cancelled**:
 
-Add to ECS service auto-scaling:
+1. **Dual-constraint capacity calculation** already ensures proper RAM allocation
+   - Tasks per instance = min(RAM_capacity, CPU_capacity)
+   - Prevents over-provisioning based on RAM alone
 
+2. **Proven performance** with current configuration
+   - 2 × c6a.xlarge handles 510 concurrent requests with 0.05% error rate
+   - 512 MB per container + 800+ MB page cache = no memory pressure
+
+3. **Built-in scaling headroom** via `task_max_count = 2 × task_min_count`
+   - Provides 2× capacity for traffic spikes without additional complexity
+
+4. **CloudWatch Dashboard** provides memory visibility
+   - ECS Memory Utilization (Row 1)
+   - Container Insights Memory Utilized (Row 6)
+   - Easy to monitor and adjust manually if needed
+
+5. **Compute-optimized instances** have ample memory
+   - c6a.xlarge: 8 GB RAM supports 6 tasks by CPU limit (not RAM)
+   - Memory is not the bottleneck
+
+**Conclusion**: Memory-based auto-scaling adds complexity without addressing a real problem in the current architecture.
+
+---
+
+### 4.3 Add Gunicorn Worker Configuration ✅ COMPLETED
+
+**Implementation Summary**:
+
+**Variable added** (`variables.tf`):
 ```hcl
-resource "aws_appautoscaling_policy" "memory" {
-  name               = "${var.service_name}-memory-scaling"
-  policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
-  scalability_dimension = "ecs:service:DesiredCount"
+variable "gunicorn_workers" {
+  description = "Number of Gunicorn worker processes (null = auto-calculate)"
+  type        = number
+  default     = null
 
-  target_tracking_scaling_policy_configuration {
-    predefined_metric_specification {
-      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
-    }
-    target_value = 70.0
+  validation {
+    condition = var.gunicorn_workers == null ? true : (
+      var.gunicorn_workers >= 1 && var.gunicorn_workers <= 16
+    )
+    error_message = "gunicorn_workers must be between 1 and 16"
   }
 }
 ```
 
-**Variable**:
+**Auto-calculation logic** (`locals.tf`):
 ```hcl
-variable "autoscaling_memory_target" {
-  description = "Target memory utilization % for auto-scaling (0 to disable memory-based scaling)"
-  type        = number
-  default     = 70
-}
-```
-
----
-
-### 4.3 Add Gunicorn Worker Configuration
-
-**Problem**: Worker count is determined by pypiserver defaults
-
-**Changes**:
-
-Add variable:
-```hcl
-variable "gunicorn_workers" {
-  description = "Number of Gunicorn worker processes. Null = auto (2 × CPU cores + 1)"
-  type        = number
-  default     = null
-}
-```
-
-Update container command in `main.tf`:
-```hcl
-container_command = concat(
-  ["run", "-p", local.container_port, "--server", "gunicorn"],
-  var.gunicorn_workers != null ? ["--workers", tostring(var.gunicorn_workers)] : [],
-  ["--backend", "simple-dir", ...]
+# Auto-calculate gunicorn workers based on container memory
+# Formula: max(2, min(8, floor(container_memory / 128)))
+# - Minimum 2 workers for concurrency
+# - Maximum 8 workers to avoid memory pressure
+# - Scale with memory: 1 worker per 128 MB
+gunicorn_workers = var.gunicorn_workers != null ? var.gunicorn_workers : max(
+  2,
+  min(8, floor(var.container_memory / 128))
 )
 ```
 
-**Rationale**:
-- Default formula: 2 × CPU + 1
-- For CPU-bound: more workers help
-- For I/O-bound (EFS): fewer workers reduce memory pressure
-- Let users tune
+**Environment variable passed to container** (`main.tf`):
+```hcl
+task_environment_variables = [
+  {
+    name  = "GUNICORN_WORKERS"
+    value = tostring(local.gunicorn_workers)
+  }
+]
+```
 
-**Documentation**:
-Add to sizing guide:
-- For EFS-backed (I/O bound): 1-2 workers recommended
-- For S3-backed (CPU bound): use defaults
-- Monitor and adjust based on metrics
+**Results**:
+- 512 MB container → 4 workers (validated in stress tests)
+- Users can override with explicit value if needed
+- Auto-calculation balances concurrency vs memory usage
+- Documented in capacity_info output
 
 ---
 

@@ -44,3 +44,8 @@ output "capacity_info" {
   description = "Information about instance capacity and task packing."
   value       = module.pypiserver.capacity_info
 }
+
+output "cloudwatch_dashboard_url" {
+  description = "URL to the CloudWatch dashboard for monitoring PyPI server metrics."
+  value       = module.pypiserver.cloudwatch_dashboard_url
+}

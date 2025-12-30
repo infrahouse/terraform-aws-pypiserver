@@ -370,6 +370,25 @@ variable "enable_efs_backup" {
   default     = true
 }
 
+variable "enable_cloudwatch_dashboard" {
+  description = <<-EOT
+    Create a CloudWatch dashboard for monitoring PyPI server metrics.
+
+    The dashboard includes:
+    - ECS service metrics (CPU, memory, task count)
+    - ALB metrics (response time, request count, HTTP status codes, target health)
+    - EFS metrics (burst credits, throughput utilization, I/O operations)
+    - Container Insights metrics (CPU and memory per container)
+
+    The dashboard provides a centralized view of all critical metrics for
+    monitoring performance, troubleshooting issues, and capacity planning.
+
+    Set to false to disable dashboard creation (not recommended for production).
+  EOT
+  type        = bool
+  default     = true
+}
+
 variable "backup_retention_days" {
   description = <<-EOT
     Number of days to retain EFS backups.
