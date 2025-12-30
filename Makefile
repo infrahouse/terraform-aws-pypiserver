@@ -15,6 +15,7 @@ TEST_REGION ?= "us-west-2"
 TEST_ROLE ?= "arn:aws:iam::303467602807:role/pypiserver-tester"
 TEST_SELECTOR ?= aws-6
 KEEP_AFTER ?=
+STRESS_TEST ?= test_stress_production_incident
 
 # Function to run pytest without role (for CI/CD environment)
 # Args: $(1) = test filter pattern, $(2) = test path, $(3) = force keep-after flag
@@ -63,6 +64,12 @@ test-clean:  ## Run tests and clean up resources after (for local, with role ass
 test-keep:  ## Run tests and keep resources for debugging (for local, with role assumption)
 	@echo "Running tests with KEEP_AFTER=1 (with role)..."
 	$(call run_pytest_with_role,test_,tests/test_module.py,1)
+
+.PHONY: stress
+stress:  ## Run stress test against existing PyPI server (run test-keep first). Override test with STRESS_TEST=test_name
+	@echo "Running stress test: $(STRESS_TEST) with KEEP_AFTER=1 (with role)..."
+	@echo "Region: $(TEST_REGION), Role: $(TEST_ROLE)"
+	$(call run_pytest_with_role,$(STRESS_TEST),tests/test_stress.py,1)
 
 
 .PHONY: lint

@@ -35,6 +35,16 @@ output "ecs_service_arn" {
   value       = module.pypiserver.service_arn
 }
 
+output "ecs_cluster_name" {
+  description = "Name of the ECS cluster running the PyPI server."
+  value       = module.pypiserver.cluster_name
+}
+
+output "ecs_service_name" {
+  description = "Name of the ECS service running the PyPI server."
+  value       = module.pypiserver.service_name
+}
+
 output "asg_name" {
   description = "Name of the Auto Scaling Group for ECS container instances."
   value       = module.pypiserver.asg_name
@@ -50,5 +60,34 @@ output "cloudwatch_alarm_arns" {
   value = {
     efs_burst_credits   = aws_cloudwatch_metric_alarm.efs_burst_credit_balance.arn
     efs_throughput_high = aws_cloudwatch_metric_alarm.efs_throughput_utilization.arn
+  }
+}
+
+output "task_min_count" {
+  description = "Actual task_min_count used (auto-calculated if var.task_min_count is null)."
+  value       = local.task_min_count
+}
+
+output "capacity_info" {
+  description = "Information about instance capacity and task packing."
+  value = {
+    instance_type                    = var.asg_instance_type
+    instance_vcpu_count              = local.instance_vcpu_count
+    instance_ram_mb                  = local.instance_total_ram_mb
+    system_overhead_mb               = local.total_overhead_mb
+    available_ram_mb_per_instance    = local.available_ram_mb
+    available_cpu_units_per_instance = local.available_cpu_units
+    container_memory_mb              = var.container_memory
+    container_memory_reservation_mb  = local.container_memory_reservation_actual
+    container_cpu_units              = local.container_cpu
+    tasks_per_instance_ram_limit     = local.tasks_per_instance_ram
+    tasks_per_instance_cpu_limit     = local.tasks_per_instance_cpu
+    tasks_per_instance               = local.tasks_per_instance
+    limiting_factor                  = local.tasks_per_instance_ram < local.tasks_per_instance_cpu ? "RAM" : "CPU"
+    asg_instance_count               = local.asg_instance_count
+    auto_calculated_task_min_count   = local.auto_task_min_count
+    actual_task_min_count            = local.task_min_count
+    actual_task_max_count            = local.task_max_count
+    gunicorn_workers_per_container   = local.gunicorn_workers
   }
 }

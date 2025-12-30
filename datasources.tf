@@ -33,3 +33,7 @@ data "aws_internet_gateway" "selected" {
 data "aws_kms_key" "efs_default" {
   key_id = "alias/aws/elasticfilesystem"
 }
+
+data "aws_ec2_instance_type" "selected" {
+  instance_type = var.asg_instance_type
+}
