@@ -15,10 +15,25 @@ variable "ami_id" {
 variable "asg_instance_type" {
   description = <<-EOT
     EC2 instance type for Auto Scaling Group instances.
-    Must be a valid AWS instance type.
+
+    The instance must have sufficient memory for:
+    - Container allocation: container_memory × tasks_per_instance
+    - Page cache: ~512 MB minimum (critical for EFS metadata caching with --backend simple-dir)
+    - System overhead: ~300 MB (ECS agent, CloudWatch, OS)
+
+    Minimum memory calculation:
+      Required RAM = (container_memory × tasks_per_instance) + 512 MB + 300 MB
+
+    Recommended instance types:
+    - Light workload (< 50 packages): t3.micro (1 GB) with container_memory=256
+    - Medium workload (50-200 packages): t3.small (2 GB) with container_memory=512 (default)
+    - Heavy workload (200+ packages): t3.medium (4 GB) with container_memory=1024
+
+    Using an instance that's too small will cause swap activity, leading to high iowait
+    and degraded performance under load.
   EOT
   type        = string
-  default     = "t3.micro"
+  default     = "t3.small"
 
   validation {
     condition     = can(regex("^[a-z][0-9][a-z]?\\.[a-z0-9]+$", var.asg_instance_type))
@@ -162,27 +177,56 @@ variable "task_max_count" {
   description = <<-EOT
     Maximum number of ECS tasks to run.
     Used for auto-scaling the PyPI service.
+
+    If null (default), automatically calculated as 2 × task_min_count to allow
+    doubling capacity during traffic spikes or scaling events.
+
+    Set explicitly to override auto-calculation for specific requirements.
   EOT
   type        = number
-  default     = 10
+  default     = null
 
   validation {
-    condition     = var.task_max_count > 0
-    error_message = "Maximum task count must be greater than 0."
+    condition     = var.task_max_count == null ? true : var.task_max_count > 0
+    error_message = "Maximum task count must be greater than 0 or null."
   }
 }
 
 variable "task_min_count" {
   description = <<-EOT
-    Minimum number of ECS tasks to run.
-    Used for auto-scaling the PyPI service.
+    Minimum number of ECS tasks to run across the entire cluster.
+
+    If null (default), automatically calculated to maximize cluster utilization
+    based on BOTH CPU and RAM constraints (whichever is more restrictive):
+
+      tasks_per_instance_ram = floor(available_ram / container_memory_reservation)
+      tasks_per_instance_cpu = floor(available_cpu / container_cpu)
+      tasks_per_instance = min(tasks_per_instance_ram, tasks_per_instance_cpu)
+      task_min_count = tasks_per_instance × number_of_instances
+
+    Number of instances is determined by asg_min_size (or number of subnets if not specified).
+
+    Example auto-calculations (with 2 instances, 512 MB containers, 640 CPU units):
+      t3.small (2 vCPU, 2 GB):
+        - RAM: floor(1248 MB / 384 MB) = 3 tasks
+        - CPU: floor(1920 units / 640 units) = 3 tasks
+        - Result: min(3, 3) × 2 = 6 tasks total (RAM and CPU balanced)
+
+      c6a.xlarge (4 vCPU, 8 GB):
+        - RAM: floor(7392 MB / 384 MB) = 19 tasks
+        - CPU: floor(3968 units / 640 units) = 6 tasks
+        - Result: min(19, 6) × 2 = 12 tasks total (CPU constrained)
+
+    This ensures all instances in the ASG are fully utilized without exceeding resource limits.
+
+    Set explicitly to override auto-calculation for specific requirements.
   EOT
   type        = number
-  default     = 2
+  default     = null
 
   validation {
-    condition     = var.task_min_count >= 0
-    error_message = "Minimum task count must be >= 0."
+    condition     = var.task_min_count == null ? true : var.task_min_count >= 0
+    error_message = "Minimum task count must be >= 0 or null."
   }
 }
 
@@ -260,10 +304,57 @@ variable "cloudinit_extra_commands" {
   default     = []
 }
 
+variable "extra_files" {
+  description = <<-EOT
+    Additional files to deploy to EC2 instances during initialization.
+    Each file should have: content, path, and permissions.
+    Example usage in calling module:
+      extra_files = [
+        {
+          content     = file("$${path.module}/files/script.sh")
+          path        = "/opt/scripts/script.sh"
+          permissions = "755"
+        }
+      ]
+  EOT
+  type = list(
+    object({
+      content     = string
+      path        = string
+      permissions = string
+    })
+  )
+  default = []
+
+  validation {
+    condition = alltrue([
+      for f in var.extra_files : can(regex("^[0-7]{3,4}$", f.permissions))
+    ])
+    error_message = "File permissions must be valid octal format (e.g., '755', '644')."
+  }
+
+  validation {
+    condition = alltrue([
+      for f in var.extra_files : length(f.path) > 0 && can(regex("^/", f.path))
+    ])
+    error_message = "File path must be an absolute path starting with '/'."
+  }
+}
+
 variable "access_log_force_destroy" {
   description = <<-EOT
     Force destroy the S3 bucket containing access logs even if it's not empty.
     Should be set to true in test environments to allow clean teardown.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "backups_force_destroy" {
+  description = <<-EOT
+    Force destroy the backup vault even if it contains recovery points.
+    Should be set to true in test environments to allow clean teardown.
+    WARNING: Setting this to true will delete all backups when destroying the vault.
   EOT
   type        = bool
   default     = false
@@ -353,7 +444,11 @@ variable "alarm_emails" {
   }
 
   validation {
-    condition     = alltrue([for email in var.alarm_emails : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", email))])
+    condition = alltrue(
+      [
+        for email in var.alarm_emails : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", email))
+      ]
+    )
     error_message = "All email addresses must be valid email format."
   }
 }
@@ -368,7 +463,11 @@ variable "alarm_topic_arns" {
   default     = []
 
   validation {
-    condition     = alltrue([for arn in var.alarm_topic_arns : can(regex("^arn:aws:sns:[a-z0-9-]+:[0-9]{12}:.+$", arn))])
+    condition = alltrue(
+      [
+        for arn in var.alarm_topic_arns : can(regex("^arn:aws:sns:[a-z0-9-]+:[0-9]{12}:.+$", arn))
+      ]
+    )
     error_message = "All topic ARNs must be valid SNS topic ARNs."
   }
 }
@@ -385,5 +484,125 @@ variable "efs_burst_credit_threshold" {
   validation {
     condition     = var.efs_burst_credit_threshold > 0
     error_message = "EFS burst credit threshold must be greater than 0."
+  }
+}
+
+variable "container_memory" {
+  description = <<-EOT
+    Memory limit for the PyPI container in MB.
+    This is the hard memory limit - the container will be killed if it exceeds this value.
+
+    With --backend simple-dir, pypiserver scans directories on every request.
+    More memory allows better page cache performance for EFS metadata.
+
+    Recommended values:
+    - Light workload (< 50 packages, < 5 users): 256 MB
+    - Medium workload (50-200 packages, 5-20 users): 512 MB (default)
+    - Heavy workload (200+ packages, 20+ users): 1024 MB
+
+    Default: 512 MB (optimized for medium workloads)
+    Minimum: 128 MB (only suitable for very light workloads)
+  EOT
+  type        = number
+  default     = 512
+
+  validation {
+    condition     = var.container_memory >= 128
+    error_message = "Container memory must be at least 128 MB."
+  }
+
+  validation {
+    condition     = var.container_memory <= 30720
+    error_message = "Container memory must not exceed 30720 MB (30 GB)."
+  }
+}
+
+variable "container_memory_reservation" {
+  description = <<-EOT
+    Soft memory limit for the PyPI container in MB.
+    This is the amount of memory reserved for the container on the host instance.
+    The container can use more memory up to the container_memory limit.
+
+    If null, defaults to 75% of container_memory to allow some burst capacity
+    while preventing overcommitment of host resources.
+
+    Set to a specific value if you want precise control over memory reservation.
+    Set to 0 to disable soft limit (not recommended).
+  EOT
+  type        = number
+  default     = null
+
+  validation {
+    condition = var.container_memory_reservation == null ? true : (
+      var.container_memory_reservation >= 0 && var.container_memory_reservation <= 30720
+    )
+    error_message = "Container memory reservation must be between 0 and 30720 MB (30 GB) or null."
+  }
+}
+
+variable "container_cpu" {
+  description = <<-EOT
+    CPU units to allocate to the PyPI container.
+    1024 CPU units = 1 vCPU.
+
+    If null (default), automatically calculated based on gunicorn workers:
+      formula: (gunicorn_workers × 150) + 40
+
+    This formula accounts for ~128 CPU units of system overhead (ECS agent, CloudWatch)
+    and is calibrated to allow 3 pypiserver tasks per t3.small instance (2 vCPU),
+    matching the memory-based limit.
+
+    Examples with auto-calculation (on t3.small with 2048 CPU - 128 overhead = 1920 available):
+      2 workers → 340 CPU units (~0.33 vCPU) → allows 5 tasks on t3.small
+      4 workers → 640 CPU units (~0.62 vCPU) → allows 3 tasks on t3.small
+      6 workers → 940 CPU units (~0.92 vCPU) → allows 2 tasks on t3.small
+
+    Override this value to manually control CPU reservation for specific needs.
+  EOT
+  type        = number
+  default     = null
+
+  validation {
+    condition = var.container_cpu == null ? true : (
+      var.container_cpu >= 128 && var.container_cpu <= 4096
+    )
+    error_message = "Container CPU must be between 128 and 4096 CPU units or null for auto-calculation."
+  }
+}
+
+variable "gunicorn_workers" {
+  description = <<-EOT
+    Number of gunicorn workers per container.
+
+    If null (default), automatically calculated based on container memory:
+      formula: max(2, min(8, floor(container_memory / 128)))
+
+    Examples with auto-calculation:
+      256 MB  → 2 workers
+      512 MB  → 4 workers
+      768 MB  → 6 workers
+      1024 MB → 8 workers
+
+    Override this value to tune for specific workload patterns:
+    - More workers = higher request capacity but more EFS directory scan contention
+    - Fewer workers = lower capacity but less EFS contention
+
+    With --backend simple-dir, each request scans the packages directory on EFS.
+    If experiencing high latency during bursts, consider reducing worker count
+    or switching to a caching backend.
+
+    Minimum: 1 worker (not recommended for production)
+    Maximum: 16 workers (gevent can handle many concurrent connections per worker)
+
+    Default: null (auto-calculated from container_memory)
+  EOT
+  type        = number
+  default     = null
+
+  validation {
+    condition = var.gunicorn_workers == null ? true : (
+      var.gunicorn_workers >= 1 && var.gunicorn_workers <= 16
+    )
+    error_message = "Gunicorn workers must be between 1 and 16 or null for auto-calculation."
   }
 }

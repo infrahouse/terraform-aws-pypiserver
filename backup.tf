@@ -36,8 +36,9 @@ resource "aws_iam_role_policy_attachment" "backup_restore" {
 
 # Backup vault
 resource "aws_backup_vault" "efs" {
-  count = var.enable_efs_backup ? 1 : 0
-  name  = "${var.service_name}-efs-backup"
+  count         = var.enable_efs_backup ? 1 : 0
+  name          = "${var.service_name}-efs-backup"
+  force_destroy = var.backups_force_destroy
 
   tags = merge(
     {

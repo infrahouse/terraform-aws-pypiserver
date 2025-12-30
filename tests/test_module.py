@@ -4,7 +4,6 @@ import os
 import shutil
 import subprocess
 import tarfile
-import tempfile
 import time
 from os import path as osp
 from textwrap import dedent
@@ -13,10 +12,9 @@ import pytest
 import requests
 from infrahouse_core.timeout import timeout
 from pytest_infrahouse import terraform_apply
+from pytest_infrahouse.utils import wait_for_instance_refresh
 
-from tests.conftest import (
-    LOG,
-)
+from tests.conftest import LOG
 
 
 def _create_test_package(package_name: str, version: str) -> bytes:
@@ -263,6 +261,7 @@ def test_module(
     subzone,
     keep_after,
     aws_provider_version,
+    boto3_session,
 ):
     terraform_root_dir = "test_data"
 
@@ -334,5 +333,64 @@ def test_module(
     ) as tf_pypiserver_output:
         LOG.info(json.dumps(tf_pypiserver_output, indent=4))
 
+        # Wait for any in-progress ASG instance refreshes to complete
+        # This ensures instances have the latest configuration from cloud-init
+        asg_name = tf_pypiserver_output["asg_name"]["value"]
+        autoscaling_client = boto3_session.client("autoscaling", region_name=aws_region)
+        wait_for_instance_refresh(
+            asg_name=asg_name,
+            autoscaling_client=autoscaling_client,
+            timeout=1200,  # 20 minutes max
+            poll_interval=10,
+        )
+
         # Validation: Test package upload/download/install
         _validate_pypi_functionality(tf_pypiserver_output)
+
+        # Log capacity calculation info
+        capacity_info = tf_pypiserver_output["capacity_info"]["value"]
+        LOG.info("=" * 70)
+        LOG.info("CAPACITY CALCULATION")
+        LOG.info("=" * 70)
+        LOG.info(f"Instance type:              {capacity_info['instance_type']}")
+        LOG.info(f"Instance RAM:               {capacity_info['instance_ram_mb']} MB")
+        LOG.info(
+            f"System overhead:            {capacity_info['system_overhead_mb']} MB"
+        )
+        LOG.info(
+            f"Available RAM per instance: {capacity_info['available_ram_mb_per_instance']} MB"
+        )
+        LOG.info(
+            f"Container memory limit:     {capacity_info['container_memory_mb']} MB"
+        )
+        LOG.info(
+            f"Container memory reserved:  {capacity_info['container_memory_reservation_mb']} MB"
+        )
+        LOG.info(
+            f"Container CPU reserved:     {capacity_info['container_cpu_units']} units ({capacity_info['container_cpu_units']/1024:.2f} vCPU)"
+        )
+        LOG.info(
+            f"Gunicorn workers/container: {capacity_info['gunicorn_workers_per_container']}"
+        )
+        LOG.info(f"Tasks per instance:         {capacity_info['tasks_per_instance']}")
+        LOG.info(f"ASG instance count:         {capacity_info['asg_instance_count']}")
+        LOG.info(
+            f"Auto-calculated task_min:   {capacity_info['auto_calculated_task_min_count']}"
+        )
+        LOG.info(
+            f"Actual task_min_count:      {capacity_info['actual_task_min_count']}"
+        )
+        LOG.info("=" * 70 + "\n")
+
+        # Output PyPI credentials for manual testing
+        pypi_url = tf_pypiserver_output["pypi_server_urls"]["value"][0]
+        username = tf_pypiserver_output["pypi_username"]["value"]
+        password = tf_pypiserver_output["pypi_password"]["value"]
+
+        LOG.info("\n" + "=" * 70)
+        LOG.info("PYPI SERVER CREDENTIALS")
+        LOG.info("=" * 70)
+        LOG.info(f"URL:      {pypi_url}")
+        LOG.info(f"Username: {username}")
+        LOG.info(f"Password: {password}")
+        LOG.info("=" * 70 + "\n")

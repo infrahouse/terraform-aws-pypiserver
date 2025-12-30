@@ -19,4 +19,21 @@ locals {
     true
   )
 
+  # Gunicorn worker count
+  # Use provided value or auto-calculate based on container memory
+  gunicorn_workers = var.gunicorn_workers != null ? (
+    var.gunicorn_workers
+  ) : max(2, min(8, floor(var.container_memory / 128)))
+
+  # Container CPU reservation
+  # Calculate based on gunicorn workers to prevent CPU overloading
+  # Formula: (workers × cpu_per_worker) + base_overhead
+  # With 4 workers: (4 × 150) + 40 = 640 CPU units per task
+  # Examples:
+  #   - t3.small (2 vCPU = 2048 units): fits 3 tasks (640×3=1920, +128 system overhead)
+  #   - c6a.xlarge (4 vCPU = 4096 units): fits 6 tasks (640×6=3840, +128 system overhead)
+  container_cpu = var.container_cpu != null ? (
+    var.container_cpu
+  ) : (local.gunicorn_workers * 150) + 40
+
 }
