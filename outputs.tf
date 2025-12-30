@@ -91,3 +91,10 @@ output "capacity_info" {
     gunicorn_workers_per_container   = local.gunicorn_workers
   }
 }
+
+output "cloudwatch_dashboard_url" {
+  description = "URL to the CloudWatch dashboard for monitoring PyPI server metrics."
+  value = var.enable_cloudwatch_dashboard ? (
+    "https://console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${aws_cloudwatch_dashboard.pypiserver[0].dashboard_name}"
+  ) : null
+}

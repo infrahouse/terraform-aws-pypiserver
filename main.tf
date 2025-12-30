@@ -74,7 +74,9 @@ module "pypiserver" {
   service_name             = var.service_name
   zone_id                  = var.zone_id
   cloudinit_extra_commands = var.cloudinit_extra_commands
-  enable_cloudwatch_logs   = true
+
+  enable_cloudwatch_logs    = true
+  enable_container_insights = true
 
   # Container resource limits
   container_memory             = var.container_memory

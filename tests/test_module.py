@@ -394,3 +394,14 @@ def test_module(
         LOG.info(f"Username: {username}")
         LOG.info(f"Password: {password}")
         LOG.info("=" * 70 + "\n")
+
+        # Output CloudWatch Dashboard URL if available
+        dashboard_url = tf_pypiserver_output.get("cloudwatch_dashboard_url", {}).get(
+            "value"
+        )
+        if dashboard_url:
+            LOG.info("=" * 70)
+            LOG.info("CLOUDWATCH DASHBOARD")
+            LOG.info("=" * 70)
+            LOG.info(f"Dashboard URL: {dashboard_url}")
+            LOG.info("=" * 70 + "\n")
