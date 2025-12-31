@@ -663,8 +663,8 @@ For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](d
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.27.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.11, < 7.0.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | ~> 3.6 |
 
 ## Modules
 
@@ -680,6 +680,7 @@ For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](d
 | [aws_backup_plan.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/backup_plan) | resource |
 | [aws_backup_selection.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/backup_selection) | resource |
 | [aws_backup_vault.efs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/backup_vault) | resource |
+| [aws_cloudwatch_dashboard.pypiserver](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_dashboard) | resource |
 | [aws_cloudwatch_metric_alarm.efs_burst_credit_balance](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
 | [aws_cloudwatch_metric_alarm.efs_throughput_utilization](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
 | [aws_efs_file_system.packages-enc](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_file_system) | resource |
@@ -728,6 +729,7 @@ For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](d
 | <a name="input_docker_image_tag"></a> [docker\_image\_tag](#input\_docker\_image\_tag) | Docker image tag for PyPI server.<br/>Defaults to 'latest'. For production, pin to a specific version (e.g., 'v2.3.0').<br/>Available tags: https://hub.docker.com/r/pypiserver/pypiserver/tags | `string` | `"latest"` | no |
 | <a name="input_efs_burst_credit_threshold"></a> [efs\_burst\_credit\_threshold](#input\_efs\_burst\_credit\_threshold) | Minimum EFS burst credit balance before triggering an alarm.<br/>EFS burst credits allow temporary higher throughput. Low credits can impact performance.<br/>Default: 1000000000000 (1 trillion bytes, approximately 1TB of burst capacity). | `number` | `1000000000000` | no |
 | <a name="input_efs_lifecycle_policy"></a> [efs\_lifecycle\_policy](#input\_efs\_lifecycle\_policy) | Number of days after which files are moved to EFS Infrequent Access storage class.<br/>Valid values: null (disabled), 7, 14, 30, 60, or 90 days.<br/>Moving old package versions to IA storage can reduce costs by up to 92%.<br/>Set to null to disable lifecycle policy. | `number` | `30` | no |
+| <a name="input_enable_cloudwatch_dashboard"></a> [enable\_cloudwatch\_dashboard](#input\_enable\_cloudwatch\_dashboard) | Create a CloudWatch dashboard for monitoring PyPI server metrics.<br/><br/>The dashboard includes:<br/>- ECS service metrics (CPU, memory, task count)<br/>- ALB metrics (response time, request count, HTTP status codes, target health)<br/>- EFS metrics (burst credits, throughput utilization, I/O operations)<br/>- Container Insights metrics (CPU and memory per container)<br/><br/>The dashboard provides a centralized view of all critical metrics for<br/>monitoring performance, troubleshooting issues, and capacity planning.<br/><br/>Set to false to disable dashboard creation (not recommended for production). | `bool` | `true` | no |
 | <a name="input_enable_efs_backup"></a> [enable\_efs\_backup](#input\_enable\_efs\_backup) | Enable AWS Backup for the EFS file system containing PyPI packages.<br/>When enabled, creates a backup vault, plan, and selection.<br/>Set to false in dev/test environments to reduce costs if backups are not needed. | `bool` | `true` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name used for resource tagging and naming.<br/>Examples: development, staging, production. | `string` | `"development"` | no |
 | <a name="input_extra_files"></a> [extra\_files](#input\_extra\_files) | Additional files to deploy to EC2 instances during initialization.<br/>Each file should have: content, path, and permissions.<br/>Example usage in calling module:<br/>  extra\_files = [<br/>    {<br/>      content     = file("${path.module}/files/script.sh")<br/>      path        = "/opt/scripts/script.sh"<br/>      permissions = "755"<br/>    }<br/>  ] | <pre>list(<br/>    object({<br/>      content     = string<br/>      path        = string<br/>      permissions = string<br/>    })<br/>  )</pre> | `[]` | no |
@@ -749,6 +751,7 @@ For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](d
 | <a name="output_capacity_info"></a> [capacity\_info](#output\_capacity\_info) | Information about instance capacity and task packing. |
 | <a name="output_cloudwatch_alarm_arns"></a> [cloudwatch\_alarm\_arns](#output\_cloudwatch\_alarm\_arns) | ARNs of CloudWatch alarms created for EFS monitoring. |
 | <a name="output_cloudwatch_alarm_sns_topic_arn"></a> [cloudwatch\_alarm\_sns\_topic\_arn](#output\_cloudwatch\_alarm\_sns\_topic\_arn) | ARN of the SNS topic used for CloudWatch alarm notifications. |
+| <a name="output_cloudwatch_dashboard_url"></a> [cloudwatch\_dashboard\_url](#output\_cloudwatch\_dashboard\_url) | URL to the CloudWatch dashboard for monitoring PyPI server metrics. |
 | <a name="output_ecs_cluster_name"></a> [ecs\_cluster\_name](#output\_ecs\_cluster\_name) | Name of the ECS cluster running the PyPI server. |
 | <a name="output_ecs_service_arn"></a> [ecs\_service\_arn](#output\_ecs\_service\_arn) | ARN of the ECS service running the PyPI server. |
 | <a name="output_ecs_service_name"></a> [ecs\_service\_name](#output\_ecs\_service\_name) | Name of the ECS service running the PyPI server. |
