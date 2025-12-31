@@ -1,7 +1,7 @@
 # PyPI Server Stability & Performance Plan
 
 **Date**: 2025-12-27
-**Status**: Draft
+**Status**: ✅ Complete (Implementation done, pending release)
 **Goal**: Stabilize pypiserver and make it autoscale-ready without major architecture changes
 
 ---
@@ -46,11 +46,9 @@
   - [Testing Requirements](#testing-requirements)
   - [Documentation Requirements](#documentation-requirements)
 - [Rollout Plan](#rollout-plan)
-  - [Phase 1: Add Configurability (v2.1.0 - Non-Breaking, Immediate)](#phase-1-add-configurability-v210---non-breaking-immediate)
-  - [Phase 2: Deprecation & Migration Guidance (v2.2.0 - Still Non-Breaking, 2-4 weeks later)](#phase-2-deprecation--migration-guidance-v220---still-non-breaking-2-4-weeks-later)
-  - [Phase 3: Change Defaults (v3.0.0 - Major Version)](#phase-3-change-defaults-v300---major-version)
-  - [Testing Strategy](#testing-strategy)
-  - [Timeline Summary](#timeline-summary)
+  - [Release Workflow](#release-workflow)
+  - [Release Type: Minor (v2.x.0)](#release-type-minor-v2x0)
+  - [What's Included in This Release](#whats-included-in-this-release)
 - [Open Questions](#open-questions)
 - [Notes from Production Incident](#notes-from-production-incident)
   - [ALB Logs Analysis](#alb-logs-analysis)
@@ -1763,17 +1761,17 @@ task_environment_variables = [
 - [x] Phase 3.2: README updates (quick start sizing)
 
 ### Should Have (Week 2-3)
-- [ ] Phase 2.1: Stress test script
-- [ ] Phase 2.2: Test package generator
-- [ ] Phase 3.1: Comprehensive sizing guide
-- [ ] Phase 3.2: README troubleshooting section
-- [ ] Phase 3.3: Architecture notes update
+- [x] Phase 2.1: Stress test script
+- [x] Phase 2.2: Test package generator
+- [x] Phase 3.1: Comprehensive sizing guide
+- [x] Phase 3.2: README troubleshooting section
+- [x] Phase 3.3: Architecture notes update
 
 ### Nice to Have (Week 4+)
-- [ ] Phase 2.3: Manual testing guide (tests/README.md)
-- [ ] Phase 4.1: CloudWatch dashboard
-- [ ] Phase 4.2: Memory-based auto-scaling
-- [ ] Phase 4.3: Gunicorn worker configuration
+- [x] Phase 2.3: Manual testing guide (tests/README.md)
+- [x] Phase 4.1: CloudWatch dashboard
+- [x] ~~Phase 4.2: Memory-based auto-scaling~~ (cancelled - not needed)
+- [x] Phase 4.3: Gunicorn worker configuration
 
 ---
 
@@ -1807,252 +1805,43 @@ task_environment_variables = [
 
 ## Rollout Plan
 
-### Phase 1: Add Configurability (v2.1.0 - Non-Breaking, Immediate)
+### Release Workflow
 
-**Goal**: Make memory/instance size configurable while keeping current defaults
+1. [ ] Create pull request from `feature/container-memory-configuration` branch
+2. [ ] CI runs tests (PR job)
+3. [ ] Merge PR into `main`
+4. [ ] Cut release (make release-*):
+   - `git cliff` updates CHANGELOG
+   - `bumpversion minor` increments version and creates tag
+5. [ ] Push commits and tags to origin
+6. [ ] CD publishes new version to Terraform Registry
 
-**Changes**:
-```hcl
-# Add new variables
-variable "container_memory" {
-  description = "Container memory in MB"
-  type        = number
-  default     = 128  # Keep current default (no breaking change)
-}
+### Release Type: Minor (v2.x.0)
 
-variable "container_memory_reservation" {
-  description = "Soft memory limit in MB (optional)"
-  type        = number
-  default     = null  # New feature, opt-in
-}
-```
+Changing defaults to recommended values is a **minor** release, not major:
+- No API changes (all variables still work the same way)
+- Existing explicit configurations continue to work unchanged
+- Only users relying on defaults will see different behavior
+- Better defaults improve the experience for new users
 
-**Key Points**:
-- ✅ No default changes → no infrastructure changes for existing users
-- ✅ New variables allow users to opt-in to better sizing
-- ✅ Backwards compatible
-- ✅ Safe to upgrade immediately
+### What's Included in This Release
 
-**Documentation**:
-- Add performance tuning section to README
-- Document new variables
-- Show recommended values for different workloads
+**New Features**:
+- `container_memory` variable for configurable container memory
+- `container_cpu` variable for configurable container CPU
+- `gunicorn_workers` variable with auto-calculation
+- CloudWatch dashboard for monitoring
+- Comprehensive stress testing infrastructure
+- Sizing guide and documentation
 
-**Release Notes**:
-```markdown
-## v2.1.0 - Performance Improvements
-
-### Added
-- `container_memory` variable for configurable container memory (default: 128 MB)
-- `container_memory_reservation` variable for burstable memory (optional)
-- Performance tuning documentation
-
-### Recommended
-For improved performance under CI/CD bursts, consider:
-- `container_memory = 512` for medium workloads
-- `asg_instance_type = "t3.small"` for medium workloads
-
-See docs/SIZING.md for detailed guidance.
-```
-
----
-
-### Phase 2: Deprecation & Migration Guidance (v2.2.0 - Still Non-Breaking, 2-4 weeks later)
-
-**Goal**: Warn users that defaults will change in next major version
-
-**Changes**:
-
-1. **Add deprecation notice to README**:
-```markdown
-## ⚠️ Upcoming Changes in v3.0.0
-
-The following defaults will change in the next major version:
+**Default Changes** (improved based on production learnings):
 - `asg_instance_type`: `t3.micro` → `t3.small` (2 GB RAM)
 - `container_memory`: `128` → `512` MB
 
-**Action Required**: If you want to keep current values, explicitly set them:
-```hcl
-module "pypiserver" {
-  source = "infrahouse/pypiserver/aws"
-
-  # Explicitly set to keep t3.micro
-  asg_instance_type = "t3.micro"
-  container_memory  = 128
-}
-```
-
-
-2. **Add CloudWatch alarm for undersized instances**:
-```hcl
-resource "aws_cloudwatch_metric_alarm" "memory_pressure" {
-  alarm_name          = "${var.service_name}-memory-pressure-warning"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "MemoryUtilization"
-  namespace           = "AWS/ECS"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "80"
-  treat_missing_data  = "notBreaching"
-
-  alarm_description = "Consider upgrading to t3.small and container_memory=512 for better performance"
-}
-```
-
-3. **Update CHANGELOG**:
-```markdown
-## v2.2.0 - Deprecation Notices
-
-### Deprecated
-- Default `asg_instance_type = "t3.micro"` will change to `"t3.small"` in v3.0.0
-- Default `container_memory = 128` will change to `512` in v3.0.0
-
-### Added
-- CloudWatch alarm for memory pressure (recommends upgrade)
-- Migration guide in README
-
-### Migration Guide
-To prepare for v3.0.0, explicitly set current values if you want to keep them,
-or migrate to recommended values now for better performance.
-```
-
-**Key Points**:
-- ✅ Still non-breaking (defaults unchanged)
-- ✅ Users get clear warning
-- ✅ 2-4 weeks notice before major version
-- ✅ Easy migration path provided
-
----
-
-### Phase 3: Change Defaults (v3.0.0 - Major Version)
-
-**Goal**: Update defaults to recommended values based on production learnings
-
-**Changes**:
-```hcl
-variable "asg_instance_type" {
-  description = "EC2 instance type for ASG"
-  type        = string
-  default     = "t3.small"  # Changed from t3.micro
-}
-
-variable "container_memory" {
-  description = "Container memory in MB"
-  type        = number
-  default     = 512  # Changed from 128
-}
-```
-
-**Why this is acceptable in v3.0.0**:
-- Major versions are expected to have changes
-- Users were warned in v2.2.0
-- Not truly "breaking" (no API changes)
-- Users can keep old values by explicitly setting them
-- Improves default experience for new users
-
-**CHANGELOG**:
-```markdown
-## v3.0.0 - Improved Performance Defaults
-
-### Changed (BREAKING: Default Values)
-- **`asg_instance_type`**: Default changed from `t3.micro` to `t3.small`
-  - Provides 2 GB RAM instead of 1 GB
-  - Prevents swap activity under CI/CD bursts
-  - Cost impact: ~$7.50/month increase (~100%)
-
-- **`container_memory`**: Default changed from `128` to `512` MB
-  - Better handles pip/poetry dependency resolution
-  - Reduces OOM kills during bursts
-
-### Migration Guide
-
-**If you want to keep current behavior**:
-```hcl
-module "pypiserver" {
-  source  = "infrahouse/pypiserver/aws"
-  version = "~> 3.0"
-
-  # Explicitly keep v2.x defaults
-  asg_instance_type = "t3.micro"
-  container_memory  = 128
-}
-```
-
-**Recommended (let defaults apply)**:
-```hcl
-module "pypiserver" {
-  source  = "infrahouse/pypiserver/aws"
-  version = "~> 3.0"
-
-  # No changes needed - new defaults apply
-  # This is recommended for better performance
-}
-```
-
-### Upgrade Impact
-- Existing deployments will recreate instances (brief downtime)
-- Cost will increase by ~$7.50/month if defaults are used
-- Performance will improve (no swapping, faster response times)
-
-### Rollback
-If needed, pin to v2.x:
-```hcl
-module "pypiserver" {
-  source  = "infrahouse/pypiserver/aws"
-  version = "~> 2.2"
-}
-```
-
-
----
-
-### Testing Strategy
-
-**For Each Phase**:
-
-1. **Pre-release testing**:
-   - Test in isolated environment
-   - Verify no unexpected infrastructure changes
-   - Run stress tests with new defaults
-   - Confirm backwards compatibility
-
-2. **Staged rollout**:
-   - Deploy to development environment first
-   - Monitor for 24-48 hours
-   - Deploy to staging
-   - Monitor for 1 week
-   - Deploy to production during low-traffic window
-
-3. **Monitoring during rollout**:
-   - Watch CloudWatch alarms
-   - Monitor EFS burst credits
-   - Check swap activity (should be zero with new defaults)
-   - Verify no OOM kills
-   - Track request latency (should improve)
-
-4. **Rollback plan**:
-   ```bash
-   # If issues occur in v3.0.0, immediately pin to v2.x
-   terraform init -upgrade=false
-
-   # Or explicitly set old values
-   # (see migration guide above)
-   ```
-
----
-
-### Timeline Summary
-
-| Version | Timeline | Type | Changes |
-|---------|----------|------|---------|
-| v2.1.0 | Immediate | Non-breaking | Add variables, keep defaults |
-| v2.2.0 | +2-4 weeks | Non-breaking | Add deprecation warnings |
-| v3.0.0 | +2-4 weeks | Major | Change defaults (recommended values) |
-
-**Total timeline**: ~6-8 weeks from v2.1.0 to v3.0.0
-
-This gives users ample time to prepare and migrate at their own pace.
+**Documentation**:
+- `docs/SIZING.md` - comprehensive sizing guide
+- Updated README with performance tuning section
+- Architecture notes with performance considerations
 
 ---
 
