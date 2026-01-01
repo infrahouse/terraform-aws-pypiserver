@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-01-01
+
+### Bug Fixes
+
+- Ensure pre-commit hooks are installed during bootstrap
+
+### Documentation
+
+- Mark stability plan complete and simplify rollout
+
+### Features
+
+- Add stress testing infrastructure and performance enhancements for production workloads
+- Add CloudWatch dashboard for comprehensive monitoring
+
 ## [2.0.2] - 2025-12-21
 
 ### Bug Fixes
