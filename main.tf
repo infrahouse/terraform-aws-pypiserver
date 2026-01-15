@@ -54,7 +54,7 @@ locals {
 }
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/ecs/aws"
-  version = "7.1.0"
+  version = "7.3.0"
   providers = {
     aws     = aws
     aws.dns = aws.dns
