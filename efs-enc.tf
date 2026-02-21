@@ -3,7 +3,7 @@ resource "aws_efs_file_system" "packages-enc" {
   encrypted                       = true
   kms_key_id                      = data.aws_kms_key.efs_default.arn
   throughput_mode                 = var.efs_throughput_mode
-  provisioned_throughput_in_mibps = var.efs_throughput_mode == "provisioned" ? var.efs_provisioned_throughput_in_mibps : null
+  provisioned_throughput_in_mibps = local.efs_provisioned_throughput
 
   dynamic "lifecycle_policy" {
     for_each = var.efs_lifecycle_policy != null ? [1] : []
