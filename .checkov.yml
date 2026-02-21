@@ -1,0 +1,33 @@
+# Checkov configuration for terraform-aws-pypiserver module
+
+framework:
+  - terraform
+
+skip-path:
+  - test_data
+
+skip-check:
+  # CKV_TF_1: Module sources use version pins from private registry
+  # Using semantic versioning from registry.infrahouse.com provides
+  # better maintainability than commit hashes
+  - CKV_TF_1
+
+  # CKV_TF_2: Module sources use tag rather than commit hash
+  # Same rationale as CKV_TF_1 - registry version pins are preferred
+  - CKV_TF_2
+
+  # CKV_AWS_26: SNS topic not encrypted with KMS CMK
+  # The alarm SNS topic carries CloudWatch alarm notifications only
+  # (threshold breaches, OK transitions). No sensitive data is published.
+  # AWS-managed encryption is sufficient for operational alerts.
+  - CKV_AWS_26
+
+  # CKV_AWS_166: Backup vault not encrypted with KMS CMK
+  # The backup vault stores EFS snapshots which are already encrypted
+  # at the filesystem level with the aws/elasticfilesystem KMS key.
+  # Default vault encryption is sufficient; adding a CMK would add
+  # key management overhead with no meaningful security benefit.
+  - CKV_AWS_166
+
+compact: true
+quiet: false

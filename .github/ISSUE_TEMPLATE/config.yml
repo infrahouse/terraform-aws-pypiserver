@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://infrahouse.github.io/terraform-aws-pypiserver/
+    about: Check the documentation for guides and troubleshooting
+  - name: Terraform Registry
+    url: https://registry.terraform.io/modules/infrahouse/pypiserver/aws/latest
+    about: View module on Terraform Registry
+  - name: Professional Support
+    url: https://infrahouse.com/contact
+    about: Contact InfraHouse for professional support

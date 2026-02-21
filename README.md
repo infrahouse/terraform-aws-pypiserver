@@ -1,43 +1,22 @@
 # terraform-aws-pypiserver
 
-A production-ready Terraform module for deploying a private [PyPI server](https://github.com/pypiserver/pypiserver) 
+[![Need Help?](https://img.shields.io/badge/Need%20Help%3F-Contact%20Us-0066CC)](https://infrahouse.com/contact)
+[![Docs](https://img.shields.io/badge/docs-github.io-blue)](https://infrahouse.github.io/terraform-aws-pypiserver/)
+[![Registry](https://img.shields.io/badge/Terraform-Registry-purple?logo=terraform)](https://registry.terraform.io/modules/infrahouse/pypiserver/aws/latest)
+[![Release](https://img.shields.io/github/release/infrahouse/terraform-aws-pypiserver.svg)](https://github.com/infrahouse/terraform-aws-pypiserver/releases/latest)
+[![Security](https://img.shields.io/github/actions/workflow/status/infrahouse/terraform-aws-pypiserver/vuln-scanner-pr.yml?label=Security)](https://github.com/infrahouse/terraform-aws-pypiserver/actions/workflows/vuln-scanner-pr.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
+[![AWS ECS](https://img.shields.io/badge/AWS-ECS-orange?logo=amazonecs)](https://aws.amazon.com/ecs/)
+[![AWS EFS](https://img.shields.io/badge/AWS-EFS-orange?logo=amazonwebservices)](https://aws.amazon.com/efs/)
+[![AWS ALB](https://img.shields.io/badge/AWS-ALB-orange?logo=amazonwebservices)](https://aws.amazon.com/elasticloadbalancing/)
+
+A production-ready Terraform module for deploying a private [PyPI server](https://github.com/pypiserver/pypiserver)
 on AWS with high availability, encryption, automated backups, and monitoring.
 
 ## Architecture
 
-```
-                                    ┌─────────────────────────────────────────────────────────────┐
-                                    │                         AWS Cloud                           │
-                                    │                                                             │
-┌──────────┐   HTTPS    ┌───────────────────────┐                                                 │
-│   pip    │───────────▶│  Application Load     │                                                 │
-│  twine   │            │     Balancer          │                                                 │
-└──────────┘            │  (Public Subnets)     │                                                 │
-                        └───────────┬───────────┘                                                 │
-                                    │                                                             │
-                        ┌───────────▼───────────┐     ┌─────────────────────┐                     │
-                        │   ECS Cluster         │     │   AWS Secrets       │                     │
-                        │   (Auto Scaling)      │────▶│   Manager           │                     │
-                        │                       │     │   (Credentials)     │                     │
-                        │  ┌─────┐    ┌─────┐   │     └─────────────────────┘                     │
-                        │  │Task │    │Task │   │                                                 │
-                        │  │ 1   │    │ 2   │   │     ┌─────────────────────┐                     │
-                        │  └──┬──┘    └──┬──┘   │     │   CloudWatch        │                     │
-                        │     │          │      │────▶│   Logs + Alarms     │                     │
-                        │  (Private Subnets)    │     └─────────────────────┘                     │
-                        └─────────┬─────────────┘                                                 │
-                                  │ NFS                                                           │
-                        ┌─────────▼─────────────┐     ┌─────────────────────┐                     │
-                        │   EFS (Encrypted)     │────▶│   AWS Backup        │                     │
-                        │   Package Storage     │     │   (Daily Backups)   │                     │
-                        └───────────────────────┘     └─────────────────────┘                     │
-                                                                                                  │
-                        ┌───────────────────────┐                                                 │
-                        │   Route53             │                                                 │
-                        │   DNS Records         │                                                 │
-                        └───────────────────────┘                                                 │
-└─────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
+![PyPI Server Architecture](docs/assets/architecture.png)
 
 ## Features
 
@@ -137,7 +116,7 @@ For production deployments:
 
 ```hcl
 module "pypiserver" {
-  source  = "infrahouse/pypiserver/aws"
+  source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
   version = "2.1.0"
 
   providers = {
@@ -172,8 +151,8 @@ output "pypi_password" {
 
 ```hcl
 module "pypiserver" {
-  source  = "infrahouse/pypiserver/aws"
-  version = "~> 2.1"
+  source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
+  version = "2.1.0"
 
   providers = {
     aws     = aws
@@ -302,7 +281,7 @@ Use the following variables to tune container resources for your workload:
 
 ```hcl
 module "pypiserver" {
-  source = "infrahouse/pypiserver/aws"
+  source = "registry.infrahouse.com/infrahouse/pypiserver/aws"
 
   # Container resource limits
   container_memory             = 512   # Hard limit (MB) - container killed if exceeded
@@ -642,6 +621,19 @@ aws ecs describe-services \
 ---
 
 For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](docs/SIZING.md).
+
+## Documentation
+
+Full documentation is available at
+[infrahouse.github.io/terraform-aws-pypiserver](https://infrahouse.github.io/terraform-aws-pypiserver/).
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[Apache 2.0](LICENSE)
 
 <!-- BEGIN_TF_DOCS -->
 
