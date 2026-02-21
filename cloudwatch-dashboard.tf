@@ -11,16 +11,29 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           properties = {
             markdown = join("", [
               "## ECS — Containers running pypiserver\n",
-              "**CPU & Memory Utilization** — Percentage of *reserved* resources actually used by pypiserver containers. ",
-              "If CPU stays above 80%, containers are struggling to serve requests fast enough — consider adding more tasks or bigger instances. ",
-              "If Memory stays high, containers may get OOM-killed (restarted).\n\n",
-              "**Task Count** — How many pypiserver containers are running. ",
-              "'Desired' is what ECS wants, 'Running' is what's actually up, 'Pending' means waiting for an EC2 instance with free capacity. ",
-              "Persistent 'Pending' tasks means the cluster is out of room — ASG needs to scale up.\n\n",
-              "**Container Insights** — Average **per-task** CPU (in CPU units, where 1024 = 1 vCPU) and memory (in MB). ",
-              "The red line is each container's reservation. If you see 12 tasks and CPU utilized = 3.7, ",
-              "it means each task uses ~3.7 CPU units out of 640 reserved — massively over-provisioned. ",
-              "Multiply by task count for cluster total (e.g. 12 tasks x 3.7 = 44 units total).",
+              "**CPU & Memory Utilization** — Percentage of ",
+              "*reserved* resources actually used by containers. ",
+              "If CPU stays above 80%, containers are struggling ",
+              "to serve requests fast enough — consider adding ",
+              "more tasks or bigger instances. ",
+              "If Memory stays high, containers may get ",
+              "OOM-killed (restarted).\n\n",
+              "**Task Count** — How many pypiserver containers ",
+              "are running. ",
+              "'Desired' is what ECS wants, 'Running' is what's ",
+              "actually up, 'Pending' means waiting for an EC2 ",
+              "instance with free capacity. ",
+              "Persistent 'Pending' tasks means the cluster is ",
+              "out of room — ASG needs to scale up.\n\n",
+              "**Container Insights** — Average **per-task** ",
+              "CPU (in CPU units, where 1024 = 1 vCPU) and ",
+              "memory (in MB). ",
+              "The red line is each container's reservation. ",
+              "If you see 12 tasks and CPU utilized = 3.7, ",
+              "it means each task uses ~3.7 CPU units out of ",
+              "640 reserved — massively over-provisioned. ",
+              "Multiply by task count for cluster total ",
+              "(e.g. 12 tasks x 3.7 = 44 units total).",
             ])
           }
           width  = 24
@@ -218,16 +231,26 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           properties = {
             markdown = join("", [
               "## ALB — Load balancer in front of pypiserver\n",
-              "**Response Time** — How long `pip install` requests take from the ALB's perspective. ",
+              "**Response Time** — How long `pip install` ",
+              "requests take from the ALB's perspective. ",
               "p50 is the median, p99 is the slowest 1%. ",
-              "Spikes usually mean EFS is slow (directory scans for `--backend simple-dir`) or containers are overloaded.\n\n",
-              "**Request Count & HTTP Codes** — Traffic volume and errors. ",
+              "Spikes usually mean EFS is slow (directory ",
+              "scans for `--backend simple-dir`) or ",
+              "containers are overloaded.\n\n",
+              "**Request Count & HTTP Codes** — Traffic ",
+              "volume and errors. ",
               "2xx = successful package downloads/uploads. ",
-              "4xx = auth failures or missing packages (usually normal). ",
-              "5xx = pypiserver crashed or timed out (investigate immediately).\n\n",
-              "**Connections** — How many TCP connections are open to the ALB. ",
-              "**Target Health** — How many containers the ALB considers healthy. ",
-              "If 'Unhealthy' is non-zero, containers are failing health checks — check ECS events and container logs.",
+              "4xx = auth failures or missing packages ",
+              "(usually normal). ",
+              "5xx = pypiserver crashed or timed out ",
+              "(investigate immediately).\n\n",
+              "**Connections** — How many TCP connections ",
+              "are open to the ALB. ",
+              "**Target Health** — How many containers the ",
+              "ALB considers healthy. ",
+              "If 'Unhealthy' is non-zero, containers are ",
+              "failing health checks — check ECS events ",
+              "and container logs.",
             ])
           }
           width  = 24
@@ -378,16 +401,27 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           type = "text"
           properties = {
             markdown = join("", [
-              "## EFS — Shared filesystem storing PyPI packages\n",
+              "## EFS — Shared filesystem storing packages\n",
               "All pypiserver containers share one EFS volume. ",
-              "Every `pip install` triggers a directory scan on EFS (`--backend simple-dir`), ",
-              "so EFS performance directly affects response times.\n\n",
-              "**Throughput Utilization** — How close EFS is to its I/O limit. Above 80% means requests may start queuing.\n\n",
-              "**Client Connections** — Number of NFS mounts (one per EC2 instance, not per container). ",
-              "Should match the number of instances in the ASG.\n\n",
-              "**I/O Operations** — Breakdown of read, write, and metadata bytes. ",
-              "For pypiserver, MetadataIOBytes (directory listings, stat calls) is usually the dominant component. ",
-              "High metadata I/O with slow response times means the package directory is large or workers are contending.",
+              "Every `pip install` triggers a directory scan ",
+              "on EFS (`--backend simple-dir`), so EFS ",
+              "performance directly affects response times.",
+              "\n\n",
+              "**Throughput Utilization** — How close EFS is ",
+              "to its I/O limit. Above 80% means requests ",
+              "may start queuing.\n\n",
+              "**Client Connections** — Number of NFS mounts ",
+              "(one per EC2 instance, not per container). ",
+              "Should match the number of instances in the ",
+              "ASG.\n\n",
+              "**I/O Operations** — Breakdown of read, write,",
+              " and metadata bytes. ",
+              "For pypiserver, MetadataIOBytes (directory ",
+              "listings, stat calls) is usually the dominant ",
+              "component. ",
+              "High metadata I/O with slow response times ",
+              "means the package directory is large or ",
+              "workers are contending.",
             ])
           }
           width  = 24
@@ -404,7 +438,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
             properties = {
               metrics = [
                 ["AWS/EFS", "BurstCreditBalance", "FileSystemId",
-                aws_efs_file_system.packages-enc.id, { stat = "Average" }]
+                local.efs_id, { stat = "Average" }]
               ]
               view    = "timeSeries"
               stacked = false
@@ -437,7 +471,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           type = "metric"
           properties = {
             metrics = [
-              ["AWS/EFS", "PercentIOLimit", "FileSystemId", aws_efs_file_system.packages-enc.id, { stat = "Average" }]
+              ["AWS/EFS", "PercentIOLimit", "FileSystemId", local.efs_id, { stat = "Average" }]
             ]
             view    = "timeSeries"
             stacked = false
@@ -472,7 +506,11 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           type = "metric"
           properties = {
             metrics = [
-              ["AWS/EFS", "ClientConnections", "FileSystemId", aws_efs_file_system.packages-enc.id, { stat = "Sum", label = "Client Connections" }]
+              [
+                "AWS/EFS", "ClientConnections",
+                "FileSystemId", local.efs_id,
+                { stat = "Sum", label = "Client Connections" }
+              ]
             ]
             view    = "timeSeries"
             stacked = false
@@ -494,7 +532,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           type = "metric"
           properties = {
             metrics = [
-              ["AWS/EFS", "DataReadIOBytes", "FileSystemId", aws_efs_file_system.packages-enc.id, { stat = "Sum", label = "Read Bytes" }],
+              ["AWS/EFS", "DataReadIOBytes", "FileSystemId", local.efs_id, { stat = "Sum", label = "Read Bytes" }],
               [".", "DataWriteIOBytes", ".", ".", { stat = "Sum", label = "Write Bytes" }],
               [".", "MetadataIOBytes", ".", ".", { stat = "Sum", label = "Metadata Bytes" }]
             ]
@@ -519,19 +557,6 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
   )
 }
 
-# Local variables for extracting resource names from ARNs
 locals {
-  # # Extract load balancer name from ARN
-  # # Format: arn:aws:elasticloadbalancing:region:account-id:loadbalancer/app/name/id
-  # load_balancer_name = try(
-  #   join("/", slice(split("/", module.service_network_lb.load_balancer_arn), 1, 4)),
-  #   ""
-  # )
-  #
-  # # Extract target group name from ARN
-  # # Format: arn:aws:elasticloadbalancing:region:account-id:targetgroup/name/id
-  # target_group_name = try(
-  #   join("/", slice(split("/", module.service_network_lb.target_group_arn), 1, 3)),
-  #   ""
-  # )
+  efs_id = aws_efs_file_system.packages-enc.id
 }

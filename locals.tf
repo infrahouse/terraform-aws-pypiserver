@@ -36,4 +36,22 @@ locals {
     var.container_cpu
   ) : (local.gunicorn_workers * 150) + 40
 
+  # Cross-variable validation for EFS throughput
+  # Provisioned mode requires an explicit throughput value
+  validate_efs_throughput = (
+    var.efs_throughput_mode == "provisioned" &&
+    var.efs_provisioned_throughput_in_mibps == null ?
+    tobool(
+      "ERROR: efs_provisioned_throughput_in_mibps is required"
+    ) :
+    true
+  )
+
+  # EFS provisioned throughput — only meaningful in "provisioned" mode
+  efs_provisioned_throughput = (
+    var.efs_throughput_mode == "provisioned"
+    ? var.efs_provisioned_throughput_in_mibps
+    : null
+  )
+
 }
