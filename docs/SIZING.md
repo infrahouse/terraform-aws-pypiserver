@@ -252,19 +252,19 @@ Based on extensive stress testing, we recommend **2-4 compute-optimized instance
 
 **Light Configuration (2 × t3.small):**
 - EC2: 2 × $0.0208/hour × 730 hours = $30.37
-- EFS: ~$0.30 (1 GB storage, bursting throughput)
+- EFS: ~$0.30 (1 GB storage, elastic throughput)
 - ALB: ~$16.20 (base) + ~$1/month (LCU)
 - **Total: ~$48/month**
 
 **Heavy Configuration (2 × c6a.xlarge - Recommended):**
 - EC2: 2 × $0.153/hour × 730 hours = $223.38
-- EFS: ~$3.00 (10 GB storage, bursting throughput)
+- EFS: ~$3.00 (10 GB storage, elastic throughput)
 - ALB: ~$16.20 (base) + ~$3/month (LCU)
 - **Total: ~$245/month**
 
 **Very Heavy Configuration (2 × c6a.2xlarge):**
 - EC2: 2 × $0.306/hour × 730 hours = $446.76
-- EFS: ~$10.00 (50 GB storage, bursting throughput)
+- EFS: ~$10.00 (50 GB storage, elastic throughput)
 - ALB: ~$16.20 (base) + ~$5/month (LCU)
 - **Total: ~$478/month**
 
@@ -334,17 +334,17 @@ Each task runs **4 gunicorn workers** (auto-calculated):
 - ✅ Need high availability (already at 2 instances minimum)
 
 **Upgrade EFS Throughput** if:
-- ✅ EFS burst credits depleting (< 1 TB)
 - ✅ `PercentIOLimit` > 80% sustained
 - ✅ Many packages (> 1000) causing metadata bottleneck
+- ✅ EFS burst credits depleting (only applies if `efs_throughput_mode = "bursting"`)
 
 ### Monitoring Metrics
 
 **Key CloudWatch Metrics:**
 
-1. **EFS BurstCreditBalance**
-   - Alert: < 1 TB (1,000,000,000,000 bytes)
-   - Action: Enable provisioned throughput or optimize access patterns
+1. **EFS PercentIOLimit**
+   - Alert: > 80% sustained
+   - Action: Verify `efs_throughput_mode = "elastic"` (default) or switch to provisioned
 
 2. **ECS CPU Utilization**
    - Alert: > 80% for 10+ minutes
@@ -446,24 +446,35 @@ module "pypiserver" {
 - Want to reserve capacity for future growth
 - Optimizing for specific workload patterns
 
-### EFS Performance Tuning
+### EFS Throughput Mode
 
-**Enable Provisioned Throughput** for consistent performance:
+The module defaults to **elastic** throughput mode, which eliminates burst credit management
+and uses pay-per-use pricing. This is recommended for pypiserver because small filesystems
+get minimal burst baseline (~50 KiB/s per GiB) and continuous metadata I/O inevitably
+depletes burst credits.
+
+**Available modes:**
 
 ```hcl
-# In your pypiserver module configuration
-# Note: Requires EFS ID from module outputs
+module "pypiserver" {
+  source = "infrahouse/pypiserver/aws"
 
-resource "aws_efs_file_system_policy" "throughput" {
-  file_system_id = module.pypiserver.efs_file_system_id
+  # Default: elastic (recommended)
+  efs_throughput_mode = "elastic"
 
-  # Provision 100 MiB/s throughput
-  throughput_mode                 = "provisioned"
-  provisioned_throughput_in_mibps = 100
+  # Alternative: provisioned (for very heavy, predictable workloads)
+  # efs_throughput_mode                 = "provisioned"
+  # efs_provisioned_throughput_in_mibps = 100
+
+  # Alternative: bursting (not recommended for pypiserver)
+  # efs_throughput_mode = "bursting"
 }
 ```
 
-**Cost:** ~$600/month per 100 MiB/s (expensive, only for very heavy workloads)
+**Cost comparison:**
+- **Elastic**: ~$0.04/GB transferred (economical for modest throughput)
+- **Provisioned**: ~$6/MiB/s/month (e.g. ~$600/month for 100 MiB/s)
+- **Bursting**: Free with storage, but credits deplete on small filesystems
 
 ---
 
@@ -471,16 +482,16 @@ resource "aws_efs_file_system_policy" "throughput" {
 
 ### High Latency Checklist
 
-1. **Check EFS Burst Credits:**
+1. **Check EFS Throughput Utilization:**
    ```bash
    aws cloudwatch get-metric-statistics \
      --namespace AWS/EFS \
-     --metric-name BurstCreditBalance \
+     --metric-name PercentIOLimit \
      --dimensions Name=FileSystemId,Value=fs-xxxxx \
      --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
      --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
      --period 300 \
-     --statistics Average
+     --statistics Maximum
    ```
 
 2. **Check Instance CPU/Memory:**

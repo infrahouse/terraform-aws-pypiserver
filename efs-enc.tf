@@ -1,7 +1,9 @@
 resource "aws_efs_file_system" "packages-enc" {
-  creation_token = "pypi-packages-encrypted"
-  encrypted      = true
-  kms_key_id     = data.aws_kms_key.efs_default.arn
+  creation_token                  = "pypi-packages-encrypted"
+  encrypted                       = true
+  kms_key_id                      = data.aws_kms_key.efs_default.arn
+  throughput_mode                 = var.efs_throughput_mode
+  provisioned_throughput_in_mibps = var.efs_throughput_mode == "provisioned" ? var.efs_provisioned_throughput_in_mibps : null
 
   dynamic "lifecycle_policy" {
     for_each = var.efs_lifecycle_policy != null ? [1] : []
