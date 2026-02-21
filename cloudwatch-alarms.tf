@@ -31,6 +31,7 @@ locals {
 # EFS Burst Credit Balance Alarm
 # Low burst credits can impact EFS performance during high I/O operations
 resource "aws_cloudwatch_metric_alarm" "efs_burst_credit_balance" {
+  count               = var.efs_throughput_mode == "bursting" ? 1 : 0
   alarm_name          = "${var.service_name}-efs-burst-credits-low"
   alarm_description   = "EFS burst credit balance is below threshold. This may impact I/O performance."
   comparison_operator = "LessThanThreshold"

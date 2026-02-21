@@ -58,7 +58,9 @@ output "cloudwatch_alarm_sns_topic_arn" {
 output "cloudwatch_alarm_arns" {
   description = "ARNs of CloudWatch alarms created for EFS monitoring."
   value = {
-    efs_burst_credits   = aws_cloudwatch_metric_alarm.efs_burst_credit_balance.arn
+    efs_burst_credits = var.efs_throughput_mode == "bursting" ? (
+      aws_cloudwatch_metric_alarm.efs_burst_credit_balance[0].arn
+    ) : null
     efs_throughput_high = aws_cloudwatch_metric_alarm.efs_throughput_utilization.arn
   }
 }

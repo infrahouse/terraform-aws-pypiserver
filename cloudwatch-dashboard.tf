@@ -4,8 +4,32 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
 
   dashboard_body = jsonencode(
     {
-      widgets = [
-        # Row 1: ECS Service Overview
+      widgets = flatten([
+        # === ECS Section ===
+        {
+          type = "text"
+          properties = {
+            markdown = join("", [
+              "## ECS — Containers running pypiserver\n",
+              "**CPU & Memory Utilization** — Percentage of *reserved* resources actually used by pypiserver containers. ",
+              "If CPU stays above 80%, containers are struggling to serve requests fast enough — consider adding more tasks or bigger instances. ",
+              "If Memory stays high, containers may get OOM-killed (restarted).\n\n",
+              "**Task Count** — How many pypiserver containers are running. ",
+              "'Desired' is what ECS wants, 'Running' is what's actually up, 'Pending' means waiting for an EC2 instance with free capacity. ",
+              "Persistent 'Pending' tasks means the cluster is out of room — ASG needs to scale up.\n\n",
+              "**Container Insights** — Average **per-task** CPU (in CPU units, where 1024 = 1 vCPU) and memory (in MB). ",
+              "The red line is each container's reservation. If you see 12 tasks and CPU utilized = 3.7, ",
+              "it means each task uses ~3.7 CPU units out of 640 reserved — massively over-provisioned. ",
+              "Multiply by task count for cluster total (e.g. 12 tasks x 3.7 = 44 units total).",
+            ])
+          }
+          width  = 24
+          height = 4
+          x      = 0
+          y      = 0
+        },
+
+        # Row 1: ECS Service Utilization
         {
           type = "metric"
           properties = {
@@ -46,7 +70,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 0
-          y      = 0
+          y      = 4
         },
         {
           type = "metric"
@@ -94,10 +118,125 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 12
-          y      = 0
+          y      = 4
         },
 
-        # Row 2: ALB Metrics
+        # Row 2: Container Insights
+        {
+          type = "metric"
+          properties = {
+            metrics = [
+              [
+                "ECS/ContainerInsights",
+                "CpuUtilized",
+                "ServiceName",
+                module.pypiserver.service_name,
+                "ClusterName",
+                module.pypiserver.cluster_name,
+                { stat = "Average", label = "Average per task" }
+              ],
+              [
+                "...", { stat = "Maximum", label = "Busiest task" }
+              ]
+            ]
+            view    = "timeSeries"
+            stacked = false
+            region  = data.aws_region.current.name
+            title   = "Container Insights - CPU Utilized (units, 1024 = 1 vCPU)"
+            period  = 300
+            yAxis = {
+              left = {
+                min = 0
+              }
+            }
+            annotations = {
+              horizontal = [
+                {
+                  label = "Container CPU reservation (${local.container_cpu} units)"
+                  value = local.container_cpu
+                  color = "#d62728"
+                }
+              ]
+            }
+          }
+          width  = 12
+          height = 6
+          x      = 0
+          y      = 10
+        },
+        {
+          type = "metric"
+          properties = {
+            metrics = [
+              [
+                "ECS/ContainerInsights",
+                "MemoryUtilized",
+                "ServiceName",
+                module.pypiserver.service_name,
+                "ClusterName",
+                module.pypiserver.cluster_name,
+                { stat = "Average", label = "Average per task (MB)" }
+              ],
+              [
+                "...", { stat = "Maximum", label = "Busiest task (MB)" }
+              ]
+            ]
+            view    = "timeSeries"
+            stacked = false
+            region  = data.aws_region.current.name
+            title   = "Container Insights - Memory Utilized (MB)"
+            period  = 300
+            yAxis = {
+              left = {
+                min = 0
+              }
+            }
+            annotations = {
+              horizontal = [
+                {
+                  label = "Soft limit (${local.container_memory_reservation_actual} MB)"
+                  value = local.container_memory_reservation_actual
+                  color = "#ff9900"
+                },
+                {
+                  label = "Hard limit (${var.container_memory} MB) - OOM kill"
+                  value = var.container_memory
+                  color = "#d62728"
+                }
+              ]
+            }
+          }
+          width  = 12
+          height = 6
+          x      = 12
+          y      = 10
+        },
+
+        # === ALB Section ===
+        {
+          type = "text"
+          properties = {
+            markdown = join("", [
+              "## ALB — Load balancer in front of pypiserver\n",
+              "**Response Time** — How long `pip install` requests take from the ALB's perspective. ",
+              "p50 is the median, p99 is the slowest 1%. ",
+              "Spikes usually mean EFS is slow (directory scans for `--backend simple-dir`) or containers are overloaded.\n\n",
+              "**Request Count & HTTP Codes** — Traffic volume and errors. ",
+              "2xx = successful package downloads/uploads. ",
+              "4xx = auth failures or missing packages (usually normal). ",
+              "5xx = pypiserver crashed or timed out (investigate immediately).\n\n",
+              "**Connections** — How many TCP connections are open to the ALB. ",
+              "**Target Health** — How many containers the ALB considers healthy. ",
+              "If 'Unhealthy' is non-zero, containers are failing health checks — check ECS events and container logs.",
+            ])
+          }
+          width  = 24
+          height = 4
+          x      = 0
+          y      = 16
+        },
+
+        # Row 3: ALB Response & Request Metrics
         {
           type = "metric"
           properties = {
@@ -140,7 +279,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 0
-          y      = 6
+          y      = 20
         },
         {
           type = "metric"
@@ -171,10 +310,10 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 12
-          y      = 6
+          y      = 20
         },
 
-        # Row 3: ALB Additional Metrics
+        # Row 4: ALB Connection & Health Metrics
         {
           type = "metric"
           properties = {
@@ -201,7 +340,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 0
-          y      = 12
+          y      = 26
         },
         {
           type = "metric"
@@ -231,43 +370,69 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 12
-          y      = 12
+          y      = 26
         },
 
-        # Row 4: EFS Metrics
+        # === EFS Section ===
         {
-          type = "metric"
+          type = "text"
           properties = {
-            metrics = [
-              ["AWS/EFS", "BurstCreditBalance", "FileSystemId",
-              aws_efs_file_system.packages-enc.id, { stat = "Average" }]
-            ]
-            view    = "timeSeries"
-            stacked = false
-            region  = data.aws_region.current.name
-            title   = "EFS - Burst Credit Balance"
-            period  = 300
-            yAxis = {
-              left = {
-                min = 0
+            markdown = join("", [
+              "## EFS — Shared filesystem storing PyPI packages\n",
+              "All pypiserver containers share one EFS volume. ",
+              "Every `pip install` triggers a directory scan on EFS (`--backend simple-dir`), ",
+              "so EFS performance directly affects response times.\n\n",
+              "**Throughput Utilization** — How close EFS is to its I/O limit. Above 80% means requests may start queuing.\n\n",
+              "**Client Connections** — Number of NFS mounts (one per EC2 instance, not per container). ",
+              "Should match the number of instances in the ASG.\n\n",
+              "**I/O Operations** — Breakdown of read, write, and metadata bytes. ",
+              "For pypiserver, MetadataIOBytes (directory listings, stat calls) is usually the dominant component. ",
+              "High metadata I/O with slow response times means the package directory is large or workers are contending.",
+            ])
+          }
+          width  = 24
+          height = 4
+          x      = 0
+          y      = 32
+        },
+
+        # Row 5: EFS Throughput Metrics
+        # Burst credit panel only shown when using bursting throughput mode
+        var.efs_throughput_mode == "bursting" ? [
+          {
+            type = "metric"
+            properties = {
+              metrics = [
+                ["AWS/EFS", "BurstCreditBalance", "FileSystemId",
+                aws_efs_file_system.packages-enc.id, { stat = "Average" }]
+              ]
+              view    = "timeSeries"
+              stacked = false
+              region  = data.aws_region.current.name
+              title   = "EFS - Burst Credit Balance"
+              period  = 300
+              yAxis = {
+                left = {
+                  min = 0
+                }
+              }
+              annotations = {
+                horizontal = [
+                  {
+                    label = "Low threshold (1 TB)"
+                    value = 1000000000000
+                    fill  = "below"
+                    color = "#d62728"
+                  }
+                ]
               }
             }
-            annotations = {
-              horizontal = [
-                {
-                  label = "Low threshold (1 TB)"
-                  value = 1000000000000
-                  fill  = "below"
-                  color = "#d62728"
-                }
-              ]
-            }
+            width  = 12
+            height = 6
+            x      = 0
+            y      = 36
           }
-          width  = 12
-          height = 6
-          x      = 0
-          y      = 18
-        },
+        ] : [],
         {
           type = "metric"
           properties = {
@@ -299,10 +464,10 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 12
-          y      = 18
+          y      = 36
         },
 
-        # Row 5: EFS Additional Metrics
+        # Row 6: EFS I/O Metrics
         {
           type = "metric"
           properties = {
@@ -323,7 +488,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 0
-          y      = 24
+          y      = 42
         },
         {
           type = "metric"
@@ -336,7 +501,7 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
             view    = "timeSeries"
             stacked = false
             region  = data.aws_region.current.name
-            title   = "EFS - I/O Operations (Bytes)"
+            title   = "EFS - I/O Bytes (per 5-min interval)"
             period  = 300
             yAxis = {
               left = {
@@ -347,71 +512,9 @@ resource "aws_cloudwatch_dashboard" "pypiserver" {
           width  = 12
           height = 6
           x      = 12
-          y      = 24
-        },
-
-        # Row 6: Container Insights
-        {
-          type = "metric"
-          properties = {
-            metrics = [
-              [
-                "ECS/ContainerInsights",
-                "CpuUtilized",
-                "ServiceName",
-                module.pypiserver.service_name,
-                "ClusterName",
-                module.pypiserver.cluster_name,
-                { stat = "Average", label = "CPU Utilized" }
-              ]
-            ]
-            view    = "timeSeries"
-            stacked = false
-            region  = data.aws_region.current.name
-            title   = "Container Insights - CPU Utilized (vCPU)"
-            period  = 300
-            yAxis = {
-              left = {
-                min = 0
-              }
-            }
-          }
-          width  = 12
-          height = 6
-          x      = 0
-          y      = 30
-        },
-        {
-          type = "metric"
-          properties = {
-            metrics = [
-              [
-                "ECS/ContainerInsights",
-                "MemoryUtilized",
-                "ServiceName",
-                module.pypiserver.service_name,
-                "ClusterName",
-                module.pypiserver.cluster_name,
-                { stat = "Average", label = "Memory Utilized (MB)" }
-              ]
-            ]
-            view    = "timeSeries"
-            stacked = false
-            region  = data.aws_region.current.name
-            title   = "Container Insights - Memory Utilized (MB)"
-            period  = 300
-            yAxis = {
-              left = {
-                min = 0
-              }
-            }
-          }
-          width  = 12
-          height = 6
-          x      = 12
-          y      = 30
+          y      = 42
         }
-      ]
+      ])
     }
   )
 }

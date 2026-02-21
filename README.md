@@ -46,7 +46,7 @@ on AWS with high availability, encryption, automated backups, and monitoring.
 - **Encryption in Transit**: HTTPS with auto-provisioned ACM certificates
 - **Authentication**: HTTP Basic Auth with credentials stored in AWS Secrets Manager
 - **Automated Backups**: Configurable AWS Backup for EFS with retention policies
-- **Monitoring**: CloudWatch alarms for EFS performance (burst credits, throughput)
+- **Monitoring**: CloudWatch alarms for EFS performance (throughput utilization, burst credits when applicable)
 - **Cost Optimization**: EFS lifecycle policies to move old packages to Infrequent Access storage
 - **Consistent Package Listings**: Uses `--backend simple-dir` to prevent cache synchronization issues across distributed containers
 
@@ -294,7 +294,7 @@ pypiserver's in-memory cache. Performance depends primarily on:
 
 1. **Instance Memory**: More RAM = better page cache for EFS metadata operations
 2. **Container Memory**: Controls container memory limits and reservations
-3. **EFS Burst Credits**: Monitor via CloudWatch alarms
+3. **EFS Throughput Mode**: Defaults to `elastic` (pay-per-use, no burst credits to manage)
 
 ### Container Resource Configuration
 
@@ -370,31 +370,25 @@ See [docs/SIZING.md](docs/SIZING.md) for comprehensive sizing guidance and capac
 
 The module creates CloudWatch alarms for critical metrics. Monitor these to ensure healthy operation:
 
-1. **EFS Burst Credits** (`BurstCreditBalance`):
-   - **What it means**: Available performance credits for burst throughput
-   - **Alarm triggers**: When < 1 TB (1,000,000,000,000 bytes)
-   - **Impact if low**: Degraded EFS performance, slower package downloads
-   - **Solution**: Enable provisioned throughput or optimize file operations
-
-2. **EFS Throughput Utilization** (`PercentIOLimit`):
+1. **EFS Throughput Utilization** (`PercentIOLimit`):
    - **What it means**: Percentage of maximum I/O throughput being used
    - **Alarm triggers**: When > 80% sustained
    - **Impact if high**: Requests may be throttled
-   - **Solution**: Enable provisioned throughput mode
+   - **Solution**: Check `efs_throughput_mode` setting; consider provisioned throughput for very heavy workloads
 
-3. **Container Memory** (ECS metrics):
+2. **Container Memory** (ECS metrics):
    - **What it means**: RAM usage per container
    - **Where to check**: ECS Console → Service → Metrics, or CloudWatch Container Insights
    - **Impact if high**: Containers near limit may be OOM killed
    - **Solution**: Increase `container_memory` variable
 
-4. **Host Swap Usage**:
+3. **Host Swap Usage**:
    - **What it means**: Instance is using swap space (disk as RAM)
    - **Where to check**: Systems Manager → Fleet Manager, or SSH to instance
    - **Impact if present**: Any swap usage indicates memory pressure and degrades performance
    - **Solution**: Increase instance type (more RAM)
 
-5. **Request Latency** (ALB metrics):
+4. **Request Latency** (ALB metrics):
    - **What it means**: Time for backend to respond to requests
    - **Metric name**: `TargetResponseTime` (P95, P99)
    - **Target**: P95 < 2 seconds for normal load, < 15 seconds for extreme bursts
@@ -434,7 +428,7 @@ aws cloudwatch get-metric-statistics \
 ### Alarm Notifications
 
 The module creates SNS topics for alarm notifications. Check your email for:
-- **Alarm name**: `{service_name}-efs-burst-credits` or `{service_name}-efs-throughput`
+- **Alarm name**: `{service_name}-efs-throughput` (and `{service_name}-efs-burst-credits` if using bursting mode)
 - **Action required**: Follow the solution steps in the alarm description
 - **Severity**: All EFS alarms are critical and should be addressed promptly
 
@@ -445,21 +439,21 @@ The module creates SNS topics for alarm notifications. Check your email for:
 **Symptoms**: `pip install` or `poetry install` takes > 5 seconds to resolve package index
 
 **Possible Causes**:
-1. EFS burst credits depleted
+1. EFS throughput throttled (check `PercentIOLimit` metric)
 2. Instance swapping due to low memory
 3. Too many packages (> 1000) causing metadata bottleneck
 
 **Diagnosis**:
 ```bash
-# 1. Check EFS burst credits (via AWS CLI or Console)
+# 1. Check EFS throughput utilization (via AWS CLI or Console)
 aws cloudwatch get-metric-statistics \
   --namespace AWS/EFS \
-  --metric-name BurstCreditBalance \
+  --metric-name PercentIOLimit \
   --dimensions Name=FileSystemId,Value=$(terraform output -raw efs_file_system_id) \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
   --period 300 \
-  --statistics Minimum
+  --statistics Maximum
 
 # 2. SSH to instance and check swap activity
 aws ssm start-session --target <instance-id>
@@ -471,7 +465,7 @@ ls /mnt/packages | wc -l
 ```
 
 **Solutions**:
-1. If credits < 1 TB: Enable EFS provisioned throughput
+1. If `PercentIOLimit` > 80%: Verify `efs_throughput_mode = "elastic"` (default) or switch to provisioned
 2. If swap columns (si/so) are non-zero: Increase `asg_instance_type`
 3. If available memory < 500 MB: Increase `container_memory` or instance size
 4. For 1000+ packages: Consider CloudFront caching layer (external to module)
@@ -670,7 +664,7 @@ For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](d
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 7.1.0 |
+| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 7.6.0 |
 | <a name="module_pypiserver_secret"></a> [pypiserver\_secret](#module\_pypiserver\_secret) | registry.infrahouse.com/infrahouse/secret/aws | 1.1.1 |
 
 ## Resources
@@ -729,6 +723,8 @@ For more detailed troubleshooting and performance tuning, see [docs/SIZING.md](d
 | <a name="input_docker_image_tag"></a> [docker\_image\_tag](#input\_docker\_image\_tag) | Docker image tag for PyPI server.<br/>Defaults to 'latest'. For production, pin to a specific version (e.g., 'v2.3.0').<br/>Available tags: https://hub.docker.com/r/pypiserver/pypiserver/tags | `string` | `"latest"` | no |
 | <a name="input_efs_burst_credit_threshold"></a> [efs\_burst\_credit\_threshold](#input\_efs\_burst\_credit\_threshold) | Minimum EFS burst credit balance before triggering an alarm.<br/>EFS burst credits allow temporary higher throughput. Low credits can impact performance.<br/>Default: 1000000000000 (1 trillion bytes, approximately 1TB of burst capacity). | `number` | `1000000000000` | no |
 | <a name="input_efs_lifecycle_policy"></a> [efs\_lifecycle\_policy](#input\_efs\_lifecycle\_policy) | Number of days after which files are moved to EFS Infrequent Access storage class.<br/>Valid values: null (disabled), 7, 14, 30, 60, or 90 days.<br/>Moving old package versions to IA storage can reduce costs by up to 92%.<br/>Set to null to disable lifecycle policy. | `number` | `30` | no |
+| <a name="input_efs_provisioned_throughput_in_mibps"></a> [efs\_provisioned\_throughput\_in\_mibps](#input\_efs\_provisioned\_throughput\_in\_mibps) | Provisioned throughput in MiB/s. Only used when efs\_throughput\_mode is "provisioned".<br/>Valid range: 1-3414 MiB/s. | `number` | `null` | no |
+| <a name="input_efs_throughput_mode"></a> [efs\_throughput\_mode](#input\_efs\_throughput\_mode) | EFS throughput mode. Elastic mode is recommended for pypiserver because<br/>small filesystems get minimal burst baseline (~50 KiB/s per GiB) and<br/>continuous metadata I/O from --backend simple-dir inevitably depletes<br/>burst credits.<br/><br/>Available modes:<br/>- "elastic" (default): Pay-per-use, no burst credits to manage.<br/>- "bursting": Free with storage, but baseline scales with filesystem size.<br/>- "provisioned": Fixed throughput, requires efs\_provisioned\_throughput\_in\_mibps. | `string` | `"elastic"` | no |
 | <a name="input_enable_cloudwatch_dashboard"></a> [enable\_cloudwatch\_dashboard](#input\_enable\_cloudwatch\_dashboard) | Create a CloudWatch dashboard for monitoring PyPI server metrics.<br/><br/>The dashboard includes:<br/>- ECS service metrics (CPU, memory, task count)<br/>- ALB metrics (response time, request count, HTTP status codes, target health)<br/>- EFS metrics (burst credits, throughput utilization, I/O operations)<br/>- Container Insights metrics (CPU and memory per container)<br/><br/>The dashboard provides a centralized view of all critical metrics for<br/>monitoring performance, troubleshooting issues, and capacity planning.<br/><br/>Set to false to disable dashboard creation (not recommended for production). | `bool` | `true` | no |
 | <a name="input_enable_efs_backup"></a> [enable\_efs\_backup](#input\_enable\_efs\_backup) | Enable AWS Backup for the EFS file system containing PyPI packages.<br/>When enabled, creates a backup vault, plan, and selection.<br/>Set to false in dev/test environments to reduce costs if backups are not needed. | `bool` | `true` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name used for resource tagging and naming.<br/>Examples: development, staging, production. | `string` | `"development"` | no |

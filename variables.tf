@@ -418,6 +418,43 @@ variable "backup_schedule" {
   }
 }
 
+variable "efs_throughput_mode" {
+  description = <<-EOT
+    EFS throughput mode. Elastic mode is recommended for pypiserver because
+    small filesystems get minimal burst baseline (~50 KiB/s per GiB) and
+    continuous metadata I/O from --backend simple-dir inevitably depletes
+    burst credits.
+
+    Available modes:
+    - "elastic" (default): Pay-per-use, no burst credits to manage.
+    - "bursting": Free with storage, but baseline scales with filesystem size.
+    - "provisioned": Fixed throughput, requires efs_provisioned_throughput_in_mibps.
+  EOT
+  type        = string
+  default     = "elastic"
+
+  validation {
+    condition     = contains(["bursting", "elastic", "provisioned"], var.efs_throughput_mode)
+    error_message = "efs_throughput_mode must be 'bursting', 'elastic', or 'provisioned'."
+  }
+}
+
+variable "efs_provisioned_throughput_in_mibps" {
+  description = <<-EOT
+    Provisioned throughput in MiB/s. Only used when efs_throughput_mode is "provisioned".
+    Valid range: 1-3414 MiB/s.
+  EOT
+  type        = number
+  default     = null
+
+  validation {
+    condition = var.efs_provisioned_throughput_in_mibps == null ? true : (
+      var.efs_provisioned_throughput_in_mibps >= 1 && var.efs_provisioned_throughput_in_mibps <= 3414
+    )
+    error_message = "efs_provisioned_throughput_in_mibps must be between 1 and 3414, or null."
+  }
+}
+
 variable "efs_lifecycle_policy" {
   description = <<-EOT
     Number of days after which files are moved to EFS Infrequent Access storage class.
