@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-02-22
+
+### Documentation
+
+- Implement Terraform module requirements ([#39](https://github.com/infrahouse/terraform-aws-pypiserver/issues/39))
+
+### Features
+
+- Add EFS elastic throughput mode and upgrade ECS module to 7.6.0
+
+### Styling
+
+- Fix line length violations and add EFS throughput validation
+
 ## [2.1.0] - 2026-01-01
 
 ### Bug Fixes
