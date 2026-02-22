@@ -44,7 +44,7 @@ This guide helps you choose the right infrastructure configuration for your PyPI
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   asg_instance_type = "t3.small"
   asg_min_size      = 2
@@ -78,7 +78,7 @@ module "pypiserver" {
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   asg_instance_type = "c6a.large"
   asg_min_size      = 2
@@ -112,7 +112,7 @@ module "pypiserver" {
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   asg_instance_type = "c6a.xlarge"
   asg_min_size      = 2
@@ -154,7 +154,7 @@ module "pypiserver" {
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   asg_instance_type = "c6a.2xlarge"
   asg_min_size      = 2
@@ -378,7 +378,7 @@ Each task runs **4 gunicorn workers** (auto-calculated):
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   # Before
   # asg_instance_type = "t3.small"
@@ -436,7 +436,7 @@ Override auto-calculation for specific requirements:
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   asg_instance_type = "c6a.xlarge"
   asg_min_size      = 2
@@ -464,7 +464,7 @@ depletes burst credits.
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.1.0"
+  version = "2.2.0"
 
   # Default: elastic (recommended)
   efs_throughput_mode = "elastic"

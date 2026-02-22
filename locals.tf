@@ -1,5 +1,5 @@
 locals {
-  module_version = "2.1.0"
+  module_version = "2.2.0"
 
   module_name = "infrahouse/pypiserver/aws"
   default_module_tags = {
