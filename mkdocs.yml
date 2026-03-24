@@ -41,6 +41,7 @@ nav:
   - Configuration: configuration.md
   - Examples: examples.md
   - Sizing: SIZING.md
+  - Upgrading: upgrading.md
   - Troubleshooting: troubleshooting.md
   - Changelog: changelog.md
 
