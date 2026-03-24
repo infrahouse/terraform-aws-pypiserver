@@ -19,8 +19,7 @@ from tests.conftest import LOG
 
 def _create_test_package(package_name: str, version: str) -> bytes:
     """Create a minimal test Python package as a tar.gz."""
-    setup_py = dedent(
-        f"""
+    setup_py = dedent(f"""
         from setuptools import setup
         setup(
             name="{package_name}",
@@ -28,11 +27,9 @@ def _create_test_package(package_name: str, version: str) -> bytes:
             py_modules=["{package_name}"],
             description="Test package for PyPI server validation",
         )
-        """
-    )
+        """)
 
-    module_py = dedent(
-        f'''
+    module_py = dedent(f'''
         """Test package {package_name} version {version}"""
 
         def get_version():
@@ -40,8 +37,7 @@ def _create_test_package(package_name: str, version: str) -> bytes:
 
         def hello():
             return "Hello from {package_name}!"
-        '''
-    )
+        ''')
 
     tar_buffer = io.BytesIO()
     with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
@@ -262,6 +258,7 @@ def test_module(
     keep_after,
     aws_provider_version,
     boto3_session,
+    cleanup_ecs_task_definitions,
 ):
     terraform_root_dir = "test_data"
 
@@ -284,9 +281,7 @@ def test_module(
 
     # Generate terraform.tf with specified AWS provider version
     with open(osp.join(terraform_module_dir, "terraform.tf"), "w") as fp:
-        fp.write(
-            dedent(
-                f"""
+        fp.write(dedent(f"""
                 terraform {{
                   //noinspection HILUnresolvedReference
                   required_providers {{
@@ -296,9 +291,7 @@ def test_module(
                     }}
                   }}
                 }}
-                """
-            )
-        )
+                """))
 
     LOG.info(
         f"Generated terraform.tf with AWS provider version: {aws_provider_version}"
@@ -306,25 +299,17 @@ def test_module(
 
     # Create pypi server
     with open(osp.join(terraform_module_dir, "terraform.tfvars"), "w") as fp:
-        fp.write(
-            dedent(
-                f"""
+        fp.write(dedent(f"""
                 region = "{aws_region}"
                 zone_id = "{zone_id}"
 
                 subnet_public_ids = {json.dumps(subnet_public_ids)}
                 subnet_private_ids = {json.dumps(subnet_private_ids)}
-                """
-            )
-        )
+                """))
         if test_role_arn:
-            fp.write(
-                dedent(
-                    f"""
+            fp.write(dedent(f"""
                     role_arn = "{test_role_arn}"
-                    """
-                )
-            )
+                    """))
     with terraform_apply(
         terraform_module_dir,
         destroy_after=not keep_after,
@@ -332,6 +317,7 @@ def test_module(
         enable_trace=False,
     ) as tf_pypiserver_output:
         LOG.info(json.dumps(tf_pypiserver_output, indent=4))
+        cleanup_ecs_task_definitions(tf_pypiserver_output["ecs_service_name"]["value"])
 
         # Wait for any in-progress ASG instance refreshes to complete
         # This ensures instances have the latest configuration from cloud-init

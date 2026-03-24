@@ -62,8 +62,7 @@ def _build_package(name: str, version: str, output_dir: Path) -> Path:
     pkg_dir.mkdir(parents=True, exist_ok=True)
 
     # Create pyproject.toml
-    (pkg_dir / "pyproject.toml").write_text(
-        f"""
+    (pkg_dir / "pyproject.toml").write_text(f"""
 [build-system]
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -72,8 +71,7 @@ build-backend = "setuptools.build_meta"
 name = "{name}"
 version = "{version}"
 description = "Test package for stress testing"
-"""
-    )
+""")
 
     # Create minimal package source
     src_dir = pkg_dir / "src" / name.replace("-", "_")
