@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-03-24
+
+### Bug Fixes
+
+- Call cleanup_ecs_task_definitions to deregister orphaned task definitions
+
+### Features
+
+- Upgrade ECS module to 7.12.0 for Container Insights log group management
+
+### Styling
+
+- Fix newlines in docs
+
 ## [2.2.0] - 2026-02-22
 
 ### Documentation
