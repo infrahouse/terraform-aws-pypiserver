@@ -34,6 +34,11 @@ module "pypiserver" {
 
   access_log_force_destroy = true
   backups_force_destroy    = true
+
+  # Must differ from the deployment region so the access-log bucket gets a
+  # genuine cross-region replica. Derive it from the actual deploy region
+  # instead of hardcoding, so the same-region guard holds wherever tests run.
+  replication_region = data.aws_region.current.region == "us-east-1" ? "us-west-2" : "us-east-1"
   alarm_emails = [
     "aleks+terraform-aws-pypiserver@example.com"
   ]
