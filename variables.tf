@@ -350,6 +350,20 @@ variable "access_log_force_destroy" {
   default     = false
 }
 
+variable "replication_region" {
+  description = <<-EOT
+    AWS region for cross-region replication of the ALB access-log bucket.
+    Must differ from the region this module is deployed in (a same-region replica still
+    fails the Vanta CRR test).
+  EOT
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]+$", var.replication_region))
+    error_message = "replication_region must be a valid AWS region (e.g., us-east-1). Got: ${var.replication_region}"
+  }
+}
+
 variable "backups_force_destroy" {
   description = <<-EOT
     Force destroy the backup vault even if it contains recovery points.

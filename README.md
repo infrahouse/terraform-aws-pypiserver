@@ -649,14 +649,14 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.11, < 7.0.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | ~> 3.6 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.50.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.9.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 7.12.0 |
+| <a name="module_pypiserver"></a> [pypiserver](#module\_pypiserver) | registry.infrahouse.com/infrahouse/ecs/aws | 8.1.0 |
 | <a name="module_pypiserver_secret"></a> [pypiserver\_secret](#module\_pypiserver\_secret) | registry.infrahouse.com/infrahouse/secret/aws | 1.1.1 |
 
 ## Resources
@@ -724,6 +724,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 | <a name="input_extra_instance_profile_permissions"></a> [extra\_instance\_profile\_permissions](#input\_extra\_instance\_profile\_permissions) | Additional IAM policy document in JSON format to attach to the ASG instance profile.<br/>Useful for granting access to S3, DynamoDB, etc. | `string` | `null` | no |
 | <a name="input_gunicorn_workers"></a> [gunicorn\_workers](#input\_gunicorn\_workers) | Number of gunicorn workers per container.<br/><br/>If null (default), automatically calculated based on container memory:<br/>  formula: max(2, min(8, floor(container\_memory / 128)))<br/><br/>Examples with auto-calculation:<br/>  256 MB  → 2 workers<br/>  512 MB  → 4 workers<br/>  768 MB  → 6 workers<br/>  1024 MB → 8 workers<br/><br/>Override this value to tune for specific workload patterns:<br/>- More workers = higher request capacity but more EFS directory scan contention<br/>- Fewer workers = lower capacity but less EFS contention<br/><br/>With --backend simple-dir, each request scans the packages directory on EFS.<br/>If experiencing high latency during bursts, consider reducing worker count<br/>or switching to a caching backend.<br/><br/>Minimum: 1 worker (not recommended for production)<br/>Maximum: 16 workers (gevent can handle many concurrent connections per worker)<br/><br/>Default: null (auto-calculated from container\_memory) | `number` | `null` | no |
 | <a name="input_load_balancer_subnets"></a> [load\_balancer\_subnets](#input\_load\_balancer\_subnets) | List of subnet IDs where the Application Load Balancer will be placed.<br/>Must be in different Availability Zones for high availability. | `list(string)` | n/a | yes |
+| <a name="input_replication_region"></a> [replication\_region](#input\_replication\_region) | AWS region for cross-region replication of the ALB access-log bucket.<br/>Must differ from the region this module is deployed in (a same-region replica still<br/>fails the Vanta CRR test). | `string` | n/a | yes |
 | <a name="input_secret_readers"></a> [secret\_readers](#input\_secret\_readers) | List of IAM role ARNs that will have read permissions for the PyPI authentication secret.<br/>The secret is stored in AWS Secrets Manager. | `list(string)` | `null` | no |
 | <a name="input_service_name"></a> [service\_name](#input\_service\_name) | Name of the PyPI service.<br/>Used for resource naming and tagging throughout the module. | `string` | `"pypiserver"` | no |
 | <a name="input_task_max_count"></a> [task\_max\_count](#input\_task\_max\_count) | Maximum number of ECS tasks to run.<br/>Used for auto-scaling the PyPI service.<br/><br/>If null (default), automatically calculated as 2 × task\_min\_count to allow<br/>doubling capacity during traffic spikes or scaling events.<br/><br/>Set explicitly to override auto-calculation for specific requirements. | `number` | `null` | no |

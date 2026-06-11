@@ -54,7 +54,7 @@ locals {
 }
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/ecs/aws"
-  version = "7.12.0"
+  version = "8.1.0"
   providers = {
     aws     = aws
     aws.dns = aws.dns
@@ -148,4 +148,5 @@ module "pypiserver" {
   users                    = var.users
   access_log_force_destroy = var.access_log_force_destroy
   alarm_emails             = var.alarm_emails
+  replication_region       = var.replication_region
 }
