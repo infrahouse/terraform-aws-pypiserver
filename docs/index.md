@@ -20,7 +20,7 @@ on AWS with high availability, encryption, automated backups, and monitoring.
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.3.0"
+  version = "3.0.0"
 
   providers = {
     aws     = aws

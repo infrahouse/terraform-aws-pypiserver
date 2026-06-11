@@ -117,7 +117,7 @@ For production deployments:
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.3.0"
+  version = "3.0.0"
 
   providers = {
     aws     = aws
@@ -152,7 +152,7 @@ output "pypi_password" {
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "2.3.0"
+  version = "3.0.0"
 
   providers = {
     aws     = aws
