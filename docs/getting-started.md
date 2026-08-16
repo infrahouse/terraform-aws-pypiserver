@@ -24,7 +24,7 @@ provider "aws" {
 
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "3.0.0"
+  version = "3.1.0"
 
   providers = {
     aws     = aws
@@ -47,7 +47,7 @@ provider "aws" {
 
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "3.0.0"
+  version = "3.1.0"
 
   providers = {
     aws     = aws
@@ -63,7 +63,7 @@ module "pypiserver" {
 ```hcl
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "3.0.0"
+  version = "3.1.0"
 
   providers = {
     aws     = aws

@@ -47,7 +47,7 @@ data "aws_subnets" "public" {
 # Deploy PyPI server
 module "pypiserver" {
   source  = "registry.infrahouse.com/infrahouse/pypiserver/aws"
-  version = "3.0.0"
+  version = "3.1.0"
 
   # Both providers point to the same account in this example.
   # Use a separate aws.dns provider if Route53 is in another account.
