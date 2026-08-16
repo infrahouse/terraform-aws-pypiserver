@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-08-16
+
+### Miscellaneous Tasks
+
+- Bump dependencies
+
 ## [3.0.0] - 2026-06-11
 
 ### Bug Fixes
